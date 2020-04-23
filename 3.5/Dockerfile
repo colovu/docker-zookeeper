@@ -106,7 +106,7 @@ RUN set -eux; \
 
 COPY ./entrypoint.sh /usr/local/bin/
 
-VOLUME ["/srv/conf", "/srv/data", "/srv/datalog", /var/log"]
+VOLUME ["/srv/conf", "/srv/data", "/srv/datalog", "/var/log"]
 
 # 如果使用gosu启动，必须保证端口在1024之上
 EXPOSE 2181 2888 3888 8080
