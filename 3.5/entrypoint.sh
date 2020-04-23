@@ -97,9 +97,9 @@ docker_create_user_directories() {
 	fi
 
 	# 在文件不存在时，写入myid
-	# ZOO_MY_ID主要用于集群配置，环境变量在启动容器时设置
+	# ZOO_SERVER_ID 主要用于集群配置，环境变量在启动容器时设置
 	if [[ ! -f "$ZOO_DATA_DIR/myid" ]]; then
-		echo "${ZOO_MY_ID:-1}" > "$ZOO_DATA_DIR/myid"
+		echo "${ZOO_SERVER_ID:-1}" > "$ZOO_DATA_DIR/myid"
 	fi
 }
 

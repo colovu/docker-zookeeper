@@ -49,6 +49,21 @@
 -v /host/dir/to/conf:/srv/conf -v /host/dir/to/data:/srv/data -v /host/dir/to/log:/var/log
 ```
 
+使用 Docker Compose 时配置文件类似如下：
+
+```yaml
+services:
+  zk-name:
+  ...
+    volumes:
+      - /host/dir/to/conf:/srv/conf
+      - /host/dir/to/data:/srv/data
+      - /host/dir/to/log:/var/log
+  ...
+```
+
+
+
 > 注意：应用需要使用的子目录会自动创建。
 
 
@@ -56,6 +71,38 @@
 ## 使用说明
 
 - 在后续介绍中，启动的容器默认命名为`zk-name`，需要根据实际情况修改
+
+
+
+### 容器网络
+
+在工作在同一个网络组中时，如果容器需要互相访问，相关联的容器可以使用容器初始化时定义的名称作为主机名进行互相访问。
+
+#### 使用命令行方式
+
+创建网络：
+
+```shell
+$ docker network create app-tier --driver bridge
+```
+
+- 使用桥接方式，创建一个命名为`app-tier`的网络
+
+
+
+### 下载镜像
+
+可以不单独下载镜像，如果镜像不存在，会在初始化容器时自动下载。
+
+```shell
+# 下载指定Tag的镜像
+$ docker pull endial/zookeeper:tag
+
+# 下载最新镜像
+$ docker pull endial/zookeeper:latest
+```
+
+
 
 
 
@@ -80,9 +127,25 @@ $ docker run -d --restart always --name zk-name endial/zookeeper:latest
   endial/zookeeper:latest
 ```
 
+使用 Docker Compose配置文件启动：
+
+```shell
+version: '3.1'
+
+services:
+  zk-name:
+    image: endial/zookeeper:latest
+    ports:
+      - '2181:2181'
+```
+
 
 
 #### 集群版容器初始化
+
+配置为 ZooKeeper 集群后，单一机器的宕机不会影响服务的正常提供。建议是用奇数个主机组成集群。如果集群中有5台服务器，则可以支持2台机器的宕机。
+
+针对集群中，当前主机的配置信息，其IP地址必须使用`0.0.0.0`；在配置信息中，其表现为主机ID与server信息中编号一致。如针对ID为1的配置信息，可类似如下：`0.0.0.0:2888:3888;2181 zookeeper2:2888:3888;2181 zookeeper3:2888:3888;2181`。
 
 可以使用 [`docker stack deploy`](https://docs.docker.com/engine/reference/commandline/stack_deploy/) 或 [`docker-compose`](https://github.com/docker/compose) 方式，启动一组服务容器。使用 `stack.yml` 配置文件方式参考如下：
 
@@ -97,7 +160,7 @@ services:
     ports:
       - 2181:2181
     environment:
-      ZOO_MY_ID: 1
+      ZOO_SERVER_ID: 1
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
 
   zoo2:
@@ -107,7 +170,7 @@ services:
     ports:
       - 2182:2181
     environment:
-      ZOO_MY_ID: 2
+      ZOO_SERVER_ID: 2
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181 server.3=zoo3:2888:3888;2181
 
   zoo3:
@@ -117,7 +180,7 @@ services:
     ports:
       - 2183:2181
     environment:
-      ZOO_MY_ID: 3
+      ZOO_SERVER_ID: 3
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=0.0.0.0:2888:3888;2181
 ```
 
@@ -142,19 +205,73 @@ $ docker run -d --restart always \
 
 ### 连接容器
 
+启用 [Docker container networking](https://docs.docker.com/engine/userguide/networking/)后，工作在容器中的 ZooKeeper 服务可以被其他应用容器访问和使用。
+
+
+
+启动 ZooKeeper 容器：
+
+```shell
+$ docker run -d --restart always \
+	--network app-tier \
+	--name zk-name \
+	endial/zookeeper:latest
+```
+
+
+
 其他业务容器连接至 ZooKeeper 容器：
 
 ```shell
-$ docker run --name other-app --link zk-name:zookeeper -d other-app-image:tag
+$ docker run --network app-tier --name other-app --link zk-name:zookeeper -d other-app-image:tag
 ```
 
-使用命令行初始化并连接至 ZooKeeper 容器：
+使用命令行初始化客户端并连接至 ZooKeeper 容器：
 
 ```shell
-$ docker run -it --rm --link zk-name:zookeeper endial/zookeeper:latest zkCli.sh -server zookeeper
+$ docker run -it --rm \
+	--network app-tier \
+	endial/zookeeper:latest zkCli.sh -server zk-name:2181  get /
+```
+
+- 启动客户端，连接至服务器`zk-name`，并运行命令`get /`
+
+
+
+#### 使用 Docker Compose 方式
+
+```yaml
+version: '3.1'
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  zk-name:
+    image: 'endial/zookeeper:latest'
+    networks:
+      - app-tier
+  myapp:
+    image: 'other-app-img:tag'
+    networks:
+      - app-tier
+```
+
+> 注意：
+>
+> - 需要修改 `other-app-img:tag`为相应业务镜像的名字
+> - 在其他的应用中，使用`zk-name`连接 ZooKeeper 容器，如果应用不是使用的该名字，可以重定义启动时的命名，或使用`--link name:name-in-container`进行名称映射
+
+启动方式：
+
+```shell
+$ docker-compose up -d -f <docker-compose.yml>
 ```
 
 
+
+#### 其他连接操作
 
 使用容器ID或启动时的命名（本例中命名为`php-fpm`）进入容器：
 
@@ -208,6 +325,8 @@ $ docker-compose logs zoo1
 
 ## 容器配置
 
+### 使用已有配置文件
+
 Zookeeper 容器的配置文件默认存储在数据卷`/srv/conf`中，文件名及子路径为`zookeeper/zoo.cfg`。有以下两种方式可以使用自定义的配置文件：
 
 - 直接映射配置文件
@@ -223,6 +342,56 @@ $ docker run -d --restart always --name zk-name -v $(pwd):/srv/conf endial/zooke
 ```
 
 > 第二种方式时，本地路径中需要包含zookeeper子目录，且相应文件存放在该目录中
+
+
+
+### 生成配置文件并修改
+
+对于没有本地配置文件的情况，可以使用以下方式进行配置。
+
+#### 1、使用镜像初始化容器
+
+使用宿主机目录映射容器数据卷，并初始化容器：
+
+```shell
+$ docker run -d --restart always --name zookeeper -v /host/path/to/conf:/srv/conf endial/zookeeper:latest
+```
+
+or using Docker Compose:
+
+```yaml
+version: '3.1'
+
+services:
+  zookeeper:
+    image: 'endial/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    volumes:
+      - /host/path/to/conf:/srv/conf
+```
+
+#### 2、修改配置文件
+
+在宿主机中修改映射目录下子目录`zookeeper`中文件`zoo.cfg`：
+
+```shell
+$ vi /path/to/zoo.cfg
+```
+
+#### 3、重新启动容器
+
+在修改配置文件后，重新启动容器，以使修改的内容起作用：
+
+```shell
+$ docker restart zookeeper
+```
+
+或者使用 Docker Compose：
+
+```shell
+$ docker-compose restart zookeeper
+```
 
 
 
@@ -292,11 +461,42 @@ Defaults to `srvr`. Zookeeper's [`4lw.commands.whitelist`](https://zookeeper.apa
 
 
 
-## 冗余模式配置参数
+其他：
 
-针对 ZooKeeper 的冗余模式（复制模式），有以下参数可以配置。
+- `ZOO_PORT_NUMBER`: ZooKeeper client port. Default: **2181**
+- `ZOO_SERVER_ID`: ID of the server in the ensemble. Default: **1**
+- `ZOO_TICK_TIME`: Basic time unit in milliseconds used by ZooKeeper for heartbeats. Default: **2000**
+- `ZOO_INIT_LIMIT`: ZooKeeper uses to limit the length of time the ZooKeeper servers in quorum have to connect to a leader. Default: **10**
+- `ZOO_SYNC_LIMIT`: How far out of date a server can be from a leader. Default: **5**
+- `ZOO_MAX_CNXNS`: Limits the total number of concurrent connections that can be made to a ZooKeeper server. Setting it to 0 entirely removes the limit. Default: **0**
+- `ZOO_MAX_CLIENT_CNXNS`: Limits the number of concurrent connections that a single client may make to a single member of the ZooKeeper ensemble. Default **60**
+- `ZOO_4LW_COMMANDS_WHITELIST`: List of whitelisted [4LW](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_4lw) commands. Default **srvr, mntr**
+- `ZOO_SERVERS`: Comma, space or colon separated list of servers. Example: zoo1:2888:3888,zoo2:2888:3888. No defaults.
+- `ZOO_CLIENT_USER`: User that will use ZooKeeper clients to auth. Default: No defaults.
+- `ZOO_CLIENT_PASSWORD`: Password that will use ZooKeeper clients to auth. No defaults.
+- `ZOO_CLIENT_PASSWORD_FILE`: Absolute path to a file that contains the password that will be used by ZooKeeper clients to perform authentication. No defaults.
+- `ZOO_SERVER_USERS`: Comma, semicolon or whitespace separated list of user to be created. Example: user1,user2,admin. No defaults
+- `ZOO_SERVER_PASSWORDS`: Comma, semicolon or whitespace separated list of passwords to assign to users when created. Example: pass4user1, pass4user2, pass4admin. No defaults
+- `ZOO_SERVER_PASSWORDS_FILE`: Abslute path to a file that contains a comma, semicolon or whitespace separated list of passwords to assign to users when created. Example: pass4user1, pass4user2, pass4admin. No defaults
+- `ZOO_ENABLE_AUTH`: Enable ZooKeeper auth. It uses SASL/Digest-MD5. Default: **no**
+- `ZOO_RECONFIG_ENABLED`: Enable ZooKeeper Dynamic Reconfiguration. Default: **no**
+- `ZOO_LISTEN_ALLIPS_ENABLED`: Listen for connections from its peers on all available IP addresses. Default: **no**
+- `ZOO_AUTOPURGE_INTERVAL`: The time interval in hours for which the autopurge task is triggered. Set to a positive integer (1 and above) to enable auto purging of old snapshots and log files. Default: **0**
+- `ZOO_AUTOPURGE_RETAIN_COUNT`: When auto purging is enabled, ZooKeeper retains the most recent snapshots and the corresponding transaction logs in the dataDir and dataLogDir respectively to this number and deletes the rest. Minimum value is 3. Default: **3**
+- `ZOO_HEAP_SIZE`: Size in MB for the Java Heap options (Xmx and XMs). This env var is ignored if Xmx an Xms are configured via `JVMFLAGS`. Default: **1024**
+- `ZOO_ENABLE_PROMETHEUS_METRICS`: Expose Prometheus metrics. Default: **no**
+- `ZOO_PROMETHEUS_METRICS_PORT_NUMBER`: Port where a Jetty server will expose Prometheus metrics. Default: **7000**
+- `ALLOW_ANONYMOUS_LOGIN`: If set to true, Allow to accept connections from unauthenticated users. Default: **no**
+- `ZOO_LOG_LEVEL`: ZooKeeper log level. Available levels are: `ALL`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, `OFF`, `TRACE`. Default: **INFO**
+- `JVMFLAGS`: Default JVMFLAGS for the ZooKeeper process. No defaults
 
-### `ZOO_MY_ID`
+
+
+## 集群模式配置参数
+
+使用 ZooKeeper 镜像，可以很容易的建立一个 [ZooKeeper](https://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html) 集群。针对 ZooKeeper 的集群模式（复制模式），有以下参数可以配置：
+
+### `ZOO_SERVER_ID`
 
 介于1~255之间的唯一值，用于标识服务器ID。需要注意，如果在初始化容器时使用一个存在`myid`文件的本地路径映射为`/srv/data`数据卷，则相应的参数设置不起作用。文件完整路径为：`/srv/data/zookeeper/myid`。
 
@@ -305,6 +505,38 @@ Defaults to `srvr`. Zookeeper's [`4lw.commands.whitelist`](https://zookeeper.apa
 定义冗余模式时的服务器列表。每个服务器使用类似`server.id=::[:role];[:]`的格式进行定义，如：`serverid.2=2888:3888;2181`。不同的服务器参数使用空格分隔。需要注意，如果在初始化容器时使用一个存在`zoo.cfg`文件的本地路径映射为`/srv/conf`数据卷，则相应的参数设置不起作用。文件完整路径为：`/srv/conf/zookeeper/zoo.conf`。此时如果需要更新配置，只能手动修改配置文件，并重新启动容器。
 
 更多信息，可参照文档 [Zookeeper Dynamic Reconfiguration](https://zookeeper.apache.org/doc/r3.5.5/zookeeperReconfig.html) 中的介绍。
+
+
+
+## Security
+
+Authentication based on SASL/Digest-MD5 can be easily enabled by passing the `ZOO_ENABLE_AUTH` env var. When enabling the ZooKeeper authentication, it is also required to pass the list of users and passwords that will be able to login.
+
+> Note: Authentication is enabled using the CLI tool `zkCli.sh`. Therefore, it's necessary to set`ZOO_CLIENT_USER` and `ZOO_CLIENT_PASSWORD` environment variables too.
+
+```
+$ docker run -it -e ZOO_ENABLE_AUTH=yes \
+               -e ZOO_SERVER_USERS=user1,user2 \
+               -e ZOO_SERVER_PASSWORDS=pass4user1,pass4user2 \
+               -e ZOO_CLIENT_USER=user1 \
+               -e ZOO_CLIENT_PASSWORD=pass4user1 \
+               bitnami/zookeeper
+```
+
+or modify the [`docker-compose.yml`](https://github.com/bitnami/bitnami-docker-zookeeper/blob/master/docker-compose.yml) file present in this repository:
+
+```
+services:
+  zookeeper:
+  ...
+    environment:
+      - ZOO_ENABLE_AUTH=yes
+      - ZOO_SERVER_USERS=user1,user2
+      - ZOO_SERVER_PASSWORDS=pass4user1,pass4user2
+      - ZOO_CLIENT_USER=user1
+      - ZOO_CLIENT_PASSWORD=pass4user1
+  ...
+```
 
 
 
@@ -382,7 +614,9 @@ $ docker run -d --restart always --name zk-name -e ZOO_LOG4J_PROP="INFO,ROLLINGF
    $ docker-compose up zoo1
    ```
 
-   
+
+
+
 
 ----
 
