@@ -6,12 +6,12 @@
 
 **版本信息**：
 
-- 3.5.7、latest
+- 3.5、3.5.7、latest
 
 **镜像信息**
 
-* 镜像地址：endial/zookeeper:latest
-  * 依赖镜像：endial/openjdk:8u242-jre
+* 镜像地址：colovu/zookeeper:latest
+  * 依赖镜像：colovu/openjdk:8u242-jre
 
 
 
@@ -62,8 +62,6 @@ services:
   ...
 ```
 
-
-
 > 注意：应用需要使用的子目录会自动创建。
 
 
@@ -77,8 +75,6 @@ services:
 ### 容器网络
 
 在工作在同一个网络组中时，如果容器需要互相访问，相关联的容器可以使用容器初始化时定义的名称作为主机名进行互相访问。
-
-#### 使用命令行方式
 
 创建网络：
 
@@ -96,10 +92,10 @@ $ docker network create app-tier --driver bridge
 
 ```shell
 # 下载指定Tag的镜像
-$ docker pull endial/zookeeper:tag
+$ docker pull colovu/zookeeper:tag
 
 # 下载最新镜像
-$ docker pull endial/zookeeper:latest
+$ docker pull colovu/zookeeper:latest
 ```
 
 
@@ -113,7 +109,7 @@ $ docker pull endial/zookeeper:latest
 直接运行一个默认容器：
 
 ```shell
-$ docker run -d --restart always --name zk-name endial/zookeeper:latest
+$ docker run -d --restart always --name zk-name colovu/zookeeper:latest
 ```
 
 使用数据卷映射生成并运行一个容器：
@@ -124,17 +120,17 @@ $ docker run -d --restart always --name zk-name endial/zookeeper:latest
   -v /host/dir/to/data:/srv/data \
   -v /host/dir/to/datalog:/srv/datalog \
   -v /host/dir/to/conf:/srv/conf \
-  endial/zookeeper:latest
+  colovu/zookeeper:latest
 ```
 
 使用 Docker Compose配置文件启动：
 
-```shell
+```yaml
 version: '3.1'
 
 services:
   zk-name:
-    image: endial/zookeeper:latest
+    image: colovu/zookeeper:latest
     ports:
       - '2181:2181'
 ```
@@ -154,7 +150,7 @@ version: '3.1'
 
 services:
   zoo1:
-    image: endial/zookeeper:latest
+    image: colovu/zookeeper:latest
     restart: always
     hostname: zoo1
     ports:
@@ -164,7 +160,7 @@ services:
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
 
   zoo2:
-    image: endial/zookeeper:latest
+    image: colovu/zookeeper:latest
     restart: always
     hostname: zoo2
     ports:
@@ -174,7 +170,7 @@ services:
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181 server.3=zoo3:2888:3888;2181
 
   zoo3:
-    image: endial/zookeeper:latest
+    image: colovu/zookeeper:latest
     restart: always
     hostname: zoo3
     ports:
@@ -190,19 +186,6 @@ services:
 
 
 
-#### 使用数据卷容器简化命令
-
-如果存在 dvc（endial/dvc-alpine） 数据卷容器：
-
-```shell
-$ docker run -d --restart always \
-  --name zk-name \
-  --volumes-from dvc \
-  endial/zookeeper:latest
-```
-
-
-
 ### 连接容器
 
 启用 [Docker container networking](https://docs.docker.com/engine/userguide/networking/)后，工作在容器中的 ZooKeeper 服务可以被其他应用容器访问和使用。
@@ -215,7 +198,7 @@ $ docker run -d --restart always \
 $ docker run -d --restart always \
 	--network app-tier \
 	--name zk-name \
-	endial/zookeeper:latest
+	colovu/zookeeper:latest
 ```
 
 
@@ -231,7 +214,7 @@ $ docker run --network app-tier --name other-app --link zk-name:zookeeper -d oth
 ```shell
 $ docker run -it --rm \
 	--network app-tier \
-	endial/zookeeper:latest zkCli.sh -server zk-name:2181  get /
+	colovu/zookeeper:latest zkCli.sh -server zk-name:2181  get /
 ```
 
 - 启动客户端，连接至服务器`zk-name`，并运行命令`get /`
@@ -249,7 +232,7 @@ networks:
 
 services:
   zk-name:
-    image: 'endial/zookeeper:latest'
+    image: 'colovu/zookeeper:latest'
     networks:
       - app-tier
   myapp:
@@ -325,6 +308,8 @@ $ docker-compose logs zoo1
 
 ## 容器配置
 
+应用配置文件默认存储在容器内：`/srv/conf/zookeeper/zoo.cfg`。
+
 ### 使用已有配置文件
 
 Zookeeper 容器的配置文件默认存储在数据卷`/srv/conf`中，文件名及子路径为`zookeeper/zoo.cfg`。有以下两种方式可以使用自定义的配置文件：
@@ -332,13 +317,13 @@ Zookeeper 容器的配置文件默认存储在数据卷`/srv/conf`中，文件�
 - 直接映射配置文件
 
 ```shell
-$ docker run -d --restart always --name zk-name -v $(pwd)/zoo.cfg:/srv/conf/zookeeper/zoo.cfg endial/zookeeper:latest
+$ docker run -d --restart always --name zk-name -v $(pwd)/zoo.cfg:/srv/conf/zookeeper/zoo.cfg colovu/zookeeper:latest
 ```
 
 - 映射配置文件数据卷
 
 ```shell
-$ docker run -d --restart always --name zk-name -v $(pwd):/srv/conf endial/zookeeper:latest
+$ docker run -d --restart always --name zk-name -v $(pwd):/srv/conf colovu/zookeeper:latest
 ```
 
 > 第二种方式时，本地路径中需要包含zookeeper子目录，且相应文件存放在该目录中
@@ -354,7 +339,7 @@ $ docker run -d --restart always --name zk-name -v $(pwd):/srv/conf endial/zooke
 使用宿主机目录映射容器数据卷，并初始化容器：
 
 ```shell
-$ docker run -d --restart always --name zookeeper -v /host/path/to/conf:/srv/conf endial/zookeeper:latest
+$ docker run -d --restart always --name zookeeper -v /host/path/to/conf:/srv/conf colovu/zookeeper:latest
 ```
 
 or using Docker Compose:
@@ -364,7 +349,7 @@ version: '3.1'
 
 services:
   zookeeper:
-    image: 'endial/zookeeper:latest'
+    image: 'colovu/zookeeper:latest'
     ports:
       - '2181:2181'
     volumes:
@@ -400,7 +385,7 @@ $ docker-compose restart zookeeper
 在初始化 ZooKeeper 容器时，如果配置文件`zoo.cfg`不存在，可以在命令行中使用相应参数对默认参数进行修改。类似命令如下：
 
 ```shell
-$ docker run -d --restart always -e "ZOO_INIT_LIMIT=10" --name zk-name endial/zookeeper:latest
+$ docker run -d --restart always -e "ZOO_INIT_LIMIT=10" --name zk-name colovu/zookeeper:latest
 ```
 
 
@@ -553,7 +538,7 @@ ZooKeeper 镜像默认配置了用于存储数据及数据日志的数据卷 `/s
 默认情况下，ZooKeeper 容器将 stdout/stderr 信息重定向至终端进行输出。可以配置将相应信息输出至`/srv/log`数据卷的相应文件中。配置方式使用 `ZOO_LOG4J_PROP` 类似如下在容器实例化时进行配置：
 
 ```shell
-$ docker run -d --restart always --name zk-name -e ZOO_LOG4J_PROP="INFO,ROLLINGFILE" endial/zookeeper:latest
+$ docker run -d --restart always --name zk-name -e ZOO_LOG4J_PROP="INFO,ROLLINGFILE" colovu/zookeeper:latest
 ```
 
 使用该配置后，相应的系统日志文件，将会存储在数据卷`/var/log`的 `zookeeper/zookeeper.log`文件中。
@@ -569,7 +554,7 @@ $ docker run -d --restart always --name zk-name -e ZOO_LOG4J_PROP="INFO,ROLLINGF
 1. 下载新版本的容器（下载最新版本或指定的tag）
 
    ```shell
-   $ docker pull endial/zookeeper/latest
+   $ docker pull colovu/zookeeper:latest
    ```
 
 2. 停止当前容器并备份数据
@@ -605,7 +590,7 @@ $ docker run -d --restart always --name zk-name -e ZOO_LOG4J_PROP="INFO,ROLLINGF
    使用之前容器的启动命令启动容器（映射数据卷）：
 
    ```shell
-   $ dockzk-name -d --restart always --name zk-name endial/zookeeper/latest
+   $ dockzk-name -d --restart always --name zk-name colovu/zookeeper:latest
    ```
 
    或使用 Docker Compose时：
@@ -620,4 +605,4 @@ $ docker run -d --restart always --name zk-name -e ZOO_LOG4J_PROP="INFO,ROLLINGF
 
 ----
 
-本文原始来源 [Endial Fang](https://github.com/endial) @ [Github.com](https://github.com)
+本文原始来源 [Endial Fang](https://github.com/colovu) @ [Github.com](https://github.com)

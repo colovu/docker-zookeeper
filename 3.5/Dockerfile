@@ -1,4 +1,4 @@
-FROM endial/openjdk:8u242-jre
+FROM colovu/openjdk:8u242-jre
 
 ARG zookeeper_ver=3.5.7
 
@@ -31,7 +31,7 @@ ENV	ZOO_CONF_DIR=/srv/conf/${APP_NAME} \
 LABEL \
 	"Version"="v${zookeeper_ver}" \
 	"Description"="Docker image for ${APP_NAME} ${zookeeper_ver} based on Ubuntu 18.04." \
-	"Dockerfile"="https://github.com/endial/docker-${APP_NAME}" \
+	"Dockerfile"="https://github.com/colovu/docker-${APP_NAME}" \
 	"Vendor"="Endial Fang (endial@126.com)"
 
 RUN set -eux; \
@@ -95,7 +95,6 @@ RUN set -eux; \
 	\
 # 设置临时目录的权限信息，设置为777是为了保证后续使用`--user`或`gosu`时，可以更改目录对应的用户属性信息
 	chown -Rf ${APP_USER}:${APP_GROUP} ${ZOO_CONF_DIR} ${ZOO_LOG_DIR} /var/run/${APP_NAME} ${ZOO_DATA_DIR} ${ZOO_DATA_LOG_DIR}; \
-# this 777 will be replaced by 700 or 755 at runtime (allows semi-arbitrary "--user" values)
 	chmod 777 ${ZOO_CONF_DIR} ${ZOO_LOG_DIR} /var/run/${APP_NAME} ${ZOO_DATA_DIR} ${ZOO_DATA_LOG_DIR}; \
 	\
 # 删除临时软件包，清理缓存
