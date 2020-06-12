@@ -1,6 +1,6 @@
 FROM colovu/openjdk:11.0.7-jre
 
-ARG zookeeper_ver=3.5.7
+ARG zookeeper_ver=3.6.1
 
 ENV APP_NAME=zookeeper \
 	APP_EXEC=zkServer.sh \
@@ -69,7 +69,12 @@ RUN set -eux; \
 	\
 # 使用下载(编译)方式安装软件
 	DIST_NAME="apache-${APP_NAME}-${APP_VERSION}-bin.tar.gz"; \
-	DIST_KEYID="0x3D296268A36FACA1B7EAF110792D43153B5B5147"; \
+	DIST_KEYID="0x3D296268A36FACA1B7EAF110792D43153B5B5147 \
+		0x52A7EA3EECAE05B0A8306471790761798F6E35FC \
+		0xBBE7232D7991050B54C8EA0ADC08637CA615D22C \
+		0x3F7A1D16FA4217B1DC75E1C9FFE35B7F15DFA1BA \
+		0x586EFEF859AF2DB190D84080BDB2011E173C31A2 \
+		"; \
 	DIST_URL=" \
 		'https://www.apache.org/dyn/closer.cgi?action=download&filename='${APP_NAME}/${APP_NAME}-${APP_VERSION}/ \
 		https://www-us.apache.org/dist/${APP_NAME}/${APP_NAME}-${APP_VERSION}/ \
