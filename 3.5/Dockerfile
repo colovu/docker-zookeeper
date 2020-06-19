@@ -70,7 +70,7 @@ RUN set -eux; \
 # 使用下载(编译)方式安装软件
 	DIST_NAME="wait-for-port-1.0.0-1-linux-amd64-debian-10"; \
 	DIST_URL=" \
-		http://192.168.1.187/dist-files/ \
+#		http://192.168.1.187/dist-files/ \
 		https://downloads.bitnami.com/files/stacksmith/ \
 		"; \
 	. /usr/local/scripts/libdownload.sh && download_dist "${DIST_NAME}.tar.gz" "${DIST_URL}"; \
