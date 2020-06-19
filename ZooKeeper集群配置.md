@@ -125,6 +125,20 @@ services:
 
 ## 集群验证
 
+使用伪集群方式启动：
+
+```shell
+$ docker-compose -f zookeeper.yml up -d
+```
+
+启动后状态类似如下：
+
+![zookeeper-start-vcluster](img/zookeeper-start-vcluster.png)
+
+
+
+### 主机运行状态
+
 使用`docker ps`命令可以查看所有在运行的容器：
 
 ![zookeeper-cluster-ps](img/zookeeper-cluster-ps.png)
@@ -134,6 +148,40 @@ services:
 ![zookeeper-cluster-zoo1](img/zookeeper-cluster-zoo1.png)
 
 ![zookeeper-cluster-zoo3](img/zookeeper-cluster-zoo3.png)
+
+### 数据操作
+
+进入伪集群中`vcluster_zoo1_1`容器：
+
+```shell
+$ docker exec vcluster_zoo1_1 -it /bin/bash
+```
+
+使用`zkCli.sh`脚本连接本机:
+
+![zookeeper-vcluster-connect-zoo1](img/zookeeper-vcluster-connect-zoo1.png)
+
+设置测试数据，并验证：
+
+
+
+![zookeeper-vcluster-cli-zoo1](img/zookeeper-vcluster-cli-zoo1-2365073.png)
+
+
+
+进入伪集群中`vcluster_zoo2_1`容器：
+
+```shell
+$ docker exec vcluster_zoo2_1 -it /bin/bash
+```
+
+使用`zkCli.sh`脚本连接本机:
+
+![zookeeper-vcluster-connect-zoo2](img/zookeeper-vcluster-connect-zoo2-2365073.png)
+
+验证 zoo1 中设置的数据是否同步：
+
+![zookeeper-vcluster-cli-zoo2](img/zookeeper-vcluster-cli-zoo2-2365073.png)
 
 
 

@@ -2,6 +2,10 @@
 
 针对 ZooKeeper 应用的 Docker 镜像，用于提供 ZooKeeper 服务。
 
+详细信息可参照官网：https://zookeeper.apache.org/
+
+
+
 ![logo](img/logo.png)
 
 **版本信息**：
@@ -12,7 +16,19 @@
 **镜像信息**
 
 * 镜像地址：colovu/zookeeper:latest
-  * 依赖镜像：colovu/openjdk:8u242-jre
+  * 依赖镜像：colovu/openjdk:latest
+
+**使用 Docker Compose 运行应用**
+
+可以使用 Git 仓库中的默认`docker-compose.yml`，快速启动应用进行测试：
+
+```shell
+$ curl -sSL https://raw.githubusercontent.com/colovu/docker-zookeeper/master/docker-compose.yml > docker-compose.yml
+
+$ docker-compose up -d
+```
+
+
 
 
 
@@ -20,7 +36,7 @@
 
 ### 端口
 
-- 2181：Client port
+- 2181：Zookeeper 业务客户端访问端口
 - 2888：Follower port
 - 3888：Election port
 - 8080：AdminServer port
@@ -69,7 +85,7 @@ services:
 
 ## 使用说明
 
-- 在后续介绍中，启动的容器默认命名为`zoo1`，需要根据实际情况修改
+- 在后续介绍中，启动的容器默认命名为`zoo1`/`zoo2`/`zoo3`，需要根据实际情况修改
 - 在后续介绍中，容器默认使用的网络命名为`app-tier`，需要根据实际情况修改
 
 
@@ -88,17 +104,15 @@ $ docker network create app-tier --driver bridge
 
 
 
-如果使用已创建的网络连接不同容器，需要在启动命令中增加类似`--network app-tier`的参数。使用 Docker Compose时，在docker-compose的配置文件中增加：
+如果使用已创建的网络连接不同容器，需要在启动命令中增加类似`--network app-tier`的参数。使用 Docker Compose 时，在`docker-compose`的配置文件中增加：
 
 ```yaml
 services:
-	AppName:
+	zoo1:
 		...
 		networks:
     	- app-tier
-    
-networks:
-  app-tier: bridge
+  ...
 ```
 
 
@@ -115,7 +129,7 @@ $ docker pull colovu/zookeeper:tag
 $ docker pull colovu/zookeeper:latest
 ```
 
-> TAG：替换为指定的标签名
+> TAG：替换为需要使用的指定标签名
 
 
 
@@ -123,7 +137,7 @@ $ docker pull colovu/zookeeper:latest
 
 如果需要将容器数据持久化存储至宿主机或数据存储中，需要确保宿主机对应的路径存在，并在启动时，映射为对应的数据卷。
 
-AppName 镜像默认配置了用于存储数据的数据卷 `/srv/data`及用于存储数据日志的数据卷`/srv/datalog`。可以使用宿主机目录映射相应的数据卷，将数据持久化存储在宿主机中。路径中，应用对应的子目录如果不存在，容器会在初始化时创建，并生成相应的默认文件。
+Zookeeper 镜像默认配置了用于存储数据的数据卷 `/srv/data`及用于存储数据日志的数据卷`/srv/datalog`。可以使用宿主机目录映射相应的数据卷，将数据持久化存储在宿主机中。路径中，应用对应的子目录如果不存在，容器会在初始化时创建，并生成相应的默认文件。
 
 > 注意：将数据持久化存储至宿主机，可避免容器销毁导致的数据丢失。同时，将数据存储及数据日志分别映射为不同的本地设备（如不同的共享数据存储）可提供较好的性能保证。
 
@@ -147,9 +161,7 @@ $ docker run -d --restart always --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes co
 使用数据卷映射生成并运行一个容器：
 
 ```shell
- $ docker run -d --restart always \
-  --name zoo1 \
-  -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes \
+ $ docker run -d --restart always --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes \
   -v /host/dir/to/data:/srv/data \
   -v /host/dir/to/datalog:/srv/datalog \
   -v /host/dir/to/conf:/srv/conf \
@@ -164,12 +176,10 @@ $ docker run -d --restart always --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes co
 
 #### 命令行方式
 
-定义网络，并启动 ZooKeeper 容器：
+使用已定义网络`app-tier`，启动 ZooKeeper 容器：
 
 ```shell
-$ docker network create app-tier --driver bridge
-
-$ docker run -d --restart always --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes \
+$ docker run -d --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes \
 	--network app-tier \
 	colovu/zookeeper:latest
 ```
@@ -181,7 +191,7 @@ $ docker run -d --restart always --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes \
 其他业务容器连接至 ZooKeeper 容器：
 
 ```shell
-$ docker run --network app-tier --name other-app --link zoo1:zookeeper -d other-app-image:tag
+$ docker run -d --name other-app --network app-tier --link zoo1:zookeeper other-app-image:tag
 ```
 
 - `--link zoo1:zookeeper`: 链接Zookeeper容器，并命名为`zookeeper`进行使用（如果其他容器中使用了该名称进行访问）
@@ -247,7 +257,7 @@ $ docker exec -it zoo1 /bin/bash
 $ docker attach  --sig-proxy=false zoo1
 ```
 
-- 该方式无法执行命令
+- **该方式无法执行命令**，仅用于通过日志观察应用运行状态
 - 如果不使用` --sig-proxy=false`，关闭终端或`Ctrl + C`时，会导致容器停止
 
 
@@ -420,17 +430,17 @@ services:
 
 ## 容器配置
 
-
-
-### 常规配置参数
-
 在初始化 ZooKeeper 容器时，如果配置文件`zoo.cfg`不存在，可以在命令行中使用相应参数对默认参数进行修改。类似命令如下：
 
 ```shell
 $ docker run -d --restart always -e "ZOO_INIT_LIMIT=10" --name zoo1 colovu/zookeeper:latest
 ```
 
-环境变量主要包括：
+
+
+### 常规配置参数
+
+常使用的环境变量主要包括：
 
 #### `ZOO_TICK_TIME`
 
@@ -535,15 +545,15 @@ $ docker run -d --restart always -e "ZOO_INIT_LIMIT=10" --name zoo1 colovu/zooke
 
 #### `ZOO_DATA_DIR`
 
-默认值：**/usr/data/zookeeper**。设置应用的默认数据存储目录。
+默认值：**/srv/data/zookeeper**。设置应用的默认数据存储目录。
 
 #### `ZOO_DATA_LOG_DIR`
 
-默认值：**/usr/datalog/zookeeper**。设置应用的默认数据日志目录。
+默认值：**/srv/datalog/zookeeper**。设置应用的默认数据日志目录。
 
 #### `ZOO_CONF_DIR`
 
-默认值：**/usr/conf/zookeeper**。设置应用的默认配置文件目录。
+默认值：**/srv/conf/zookeeper**。设置应用的默认配置文件目录。
 
 #### `ZOO_LOG_DIR`
 
@@ -724,7 +734,15 @@ $ docker-compose restart zookeeper
 
 ## 安全
 
-### 用户认证【TODO】
+### 用户认证
+
+Zookeeper 镜像默认禁用了无密码访问功能，在实际生产环境中建议使用用户名及密码控制访问；如果为了测试需要，可以使用以下环境变量启用无密码访问功能：
+
+```shell
+ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+```
+
+
 
 通过配置环境变量`ZOO_ENABLE_AUTH`，可以启用基于 SASL/Digest-MD5 加密的用户认证功能。在启用用户认证时，同时需要设置允许登录相应用户名及密码。
 
@@ -782,7 +800,7 @@ $ docker-compose logs zoo1
 
 
 
-实际使用时，可以配置将相应信息输出至`/srv/log`数据卷的相应文件中。配置方式使用 `ZOO_LOG4J_PROP` 类似如下在容器实例化时进行配置：
+实际使用时，可以配置将相应信息输出至`/var/log`或`/srv/datalog`数据卷的相应文件中。配置方式使用 `ZOO_LOG4J_PROP` 类似如下在容器实例化时进行配置：
 
 ```shell
 $ docker run -d --restart always --name zoo1 -e ZOO_LOG4J_PROP="INFO,ROLLINGFILE" colovu/zookeeper:latest
@@ -790,7 +808,7 @@ $ docker run -d --restart always --name zoo1 -e ZOO_LOG4J_PROP="INFO,ROLLINGFILE
 
 使用该配置后，相应的系统日志文件，将会存储在数据卷`/var/log`的 `zookeeper/zookeeper.log`文件中。
 
-更多有关日志的使用帮助，可参考文档 [ZooKeeper Logging](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_logging) 中更多说明。
+容器默认使用的日志驱动为 `json-file`，如果需要使用其他驱动，可以使用`--log-driver`进行修改；更多有关日志的使用帮助，可参考文档 [ZooKeeper Logging](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_logging) 中更多说明。
 
 
 

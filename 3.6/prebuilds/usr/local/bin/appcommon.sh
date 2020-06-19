@@ -35,12 +35,12 @@ export ZOO_LOG_DIR="${APP_LOG_DIR}"
 #export ZOO_BIN_DIR="${ZOO_BASE_DIR}/bin"
 
 # Users
-export ZOO_DAEMON_USER="zookeeper"
-export ZOO_DAEMON_GROUP="zookeeper"
+export ZOO_DAEMON_USER="${APP_USER}"
+export ZOO_DAEMON_GROUP="${APP_GROUP}"
 
 # Cluster configuration
-export ZOO_PORT_NUMBER="${ZOO_CLIENT_PORT:-2181}"
 export ZOO_SERVER_ID="${ZOO_SERVER_ID:-1}"
+export ZOO_PORT_NUMBER="${ZOO_CLIENT_PORT:-2181}"
 export ZOO_SERVERS="${ZOO_SERVERS:-server.1=0.0.0.0:2888:3888}"
 
 # Zookeeper settings
@@ -146,7 +146,7 @@ zoo_conf_set() {
     zoo_common_conf_set "$ZOO_CONF_DIR/zoo.cfg" "$@"
 }
 
-# 更新 server.properties 配置文件中指定变量值
+# 更新 log4j.properties 配置文件中指定变量值
 # 全局变量:
 #   APP_CONF_DIR
 # 变量:
@@ -396,7 +396,7 @@ zoo_start_server_bg() {
         $start_command >/dev/null 2>&1
     fi
     # 检测端口是否就绪
-    # wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
+    wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
 }
 
 ########################

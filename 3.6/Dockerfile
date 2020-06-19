@@ -68,6 +68,19 @@ RUN set -eux; \
 	apt-get install -y --no-install-recommends ${fetchDeps}; \
 	\
 # 使用下载(编译)方式安装软件
+	DIST_NAME="wait-for-port-1.0.0-1-linux-amd64-debian-10"; \
+	DIST_URL=" \
+		http://192.168.1.187/dist-files/ \
+		https://downloads.bitnami.com/files/stacksmith/ \
+		"; \
+	. /usr/local/scripts/libdownload.sh && download_dist "${DIST_NAME}.tar.gz" "${DIST_URL}"; \
+	\
+# 二进制解压
+	APP_BIN="/usr/local/bin"; \
+	tar --extract --gunzip --file "${DIST_NAME}.tar.gz" --directory "${APP_BIN}" --strip-components 4 "${DIST_NAME}/files/common/bin/"; \
+	rm -rf "${DIST_NAME}.tar.gz" "/usr/local/bin/.buildcomplete"; \
+	\
+	\
 	DIST_NAME="apache-${APP_NAME}-${APP_VERSION}-bin.tar.gz"; \
 	DIST_KEYID="0x3D296268A36FACA1B7EAF110792D43153B5B5147 \
 		0x52A7EA3EECAE05B0A8306471790761798F6E35FC \
@@ -82,7 +95,6 @@ RUN set -eux; \
 		https://archive.apache.org/dist/${APP_NAME}/${APP_NAME}-${APP_VERSION}/ \
 		"; \
 	. /usr/local/scripts/libdownload.sh && download_dist "${DIST_NAME}" "${DIST_URL}" --pgpkey "${DIST_KEYID}"; \
-#	. /usr/local/scripts/libdownload.sh && download_dist "wait-for-port.zip" "https://downloads.bitnami.com/files/stacksmith/"; \
 	\
 # 二进制解压
 	APP_BIN="/usr/local/${APP_NAME}"; \
@@ -91,11 +103,8 @@ RUN set -eux; \
 	cp -rf ${APP_BIN}/conf/* "${APP_DEF_DIR}/"; \
 	rm -rf "${DIST_NAME}"; \
 	\
-#	tar --extract --gunzip --file "wait-for-port.zip" --directory "/usr/local/bin" --strip-components 1; \
-#	rm -rf "wait-for-port.zip"; \
-	\
 # 检测是否存在overrides脚本文件，如果存在，执行
-	{ [ ! -e "/usr/local/overrides/overrides-${APP_VERSION}1.sh" ] || /bin/bash "/usr/local/overrides/overrides-${APP_VERSION}.sh"; }; \
+	{ [ ! -e "/usr/local/overrides/overrides-${APP_VERSION}.sh" ] || /bin/bash "/usr/local/overrides/overrides-${APP_VERSION}.sh"; }; \
 	\
 # 设置临时目录的权限信息，设置为777是为了保证后续使用`--user`或`gosu`时，可以更改目录对应的用户属性信息；运行时会被更改为700或755
 	chown -Rf ${APP_USER}:${APP_GROUP} ${APP_DIRS}; \
