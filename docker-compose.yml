@@ -1,0 +1,10 @@
+version: '3.6'
+
+services:
+  zookeeper:
+    image: 'colovu/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    environment:
+      - ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_LISTEN_ALLIPS_ENABLED=yes
