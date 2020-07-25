@@ -1,28 +1,28 @@
 #!/bin/bash
-#
+# Ver: 1.0 by Endial Fang (endial@126.com)
+# 
 # 应用通用业务处理函数
 
 # 加载依赖脚本
-. /usr/local/scripts/liblog.sh
+. /usr/local/scripts/libcommon.sh       # 通用函数库
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
-. /usr/local/scripts/libcommon.sh
+. /usr/local/scripts/libos.sh
+. /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
 
 # 函数列表
 
-# 加载应用使用的环境变量初始值，该函数在相关脚本中以eval方式调用
+# 加载应用使用的环境变量初始值，该函数在相关脚本中以 eval 方式调用
 # 全局变量:
 #   ENV_* : 容器使用的全局变量
-#   ZOO_* : 应用配置文件使用的全局变量，变量名根据配置项定义
+#   APP_* : 在镜像创建时定义的全局变量
+#   *_* : 应用配置文件使用的全局变量，变量名根据配置项定义
 # 返回值:
 #   可以被 'eval' 使用的序列化输出
 docker_app_env() {
-    # 以下变量已经在创建镜像时定义，可直接使用
-    # APP_NAME、APP_EXEC、APP_USER、APP_GROUP、APP_VERSION
-    # APP_BASE_DIR、APP_DEF_DIR、APP_CONF_DIR、APP_CERT_DIR、APP_DATA_DIR、APP_CACHE_DIR、APP_RUN_DIR、APP_LOG_DIR
     cat <<"EOF"
-# Debug log message
+# Common Settings
 export ENV_DEBUG=${ENV_DEBUG:-false}
 
 # Paths
@@ -439,11 +439,12 @@ zoo_configure_acl() {
 }
 
 # 应用默认初始化操作
+# 执行完毕后，生成文件 ${APP_CONF_DIR}/.app_init_flag 及 ${APP_DATA_DIR}/.data_init_flag 文件
 docker_app_init() {
-    LOG_I "Initializing ${APP_NAME}..."
+    LOG_D "Check init status of ${APP_NAME}..."
 
     # 检测配置文件是否存在
-    if [[ ! -f "$ZOO_CONF_FILE" || ! -f "/srv/data/${APP_NAME}/app_init_flag" ]]; then
+    if [[ ! -f "${APP_CONF_DIR}/.app_init_flag" ]]; then
         LOG_I "No injected configuration file found, creating default config files..."
         zoo_generate_conf
         zoo_configure_heap_size "$ZOO_HEAP_SIZE"
@@ -454,39 +455,58 @@ docker_app_init() {
         if is_boolean_yes "$ZOO_ENABLE_PROMETHEUS_METRICS"; then
             zoo_enable_prometheus_metrics
         fi
-        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/app_init_flag
+
+        touch ${APP_CONF_DIR}/.app_init_flag
+        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_CONF_DIR}/.app_init_flag
     else
         LOG_I "User injected custom configuration detected!"
     fi
 
-    if is_dir_empty "$ZOO_DATA_DIR" || [[ ! -f "/srv/data/${APP_NAME}/data_init_flag" ]]; then
-        LOG_I "Deploying ZooKeeper from scratch..."
+    if [[ ! -f "${APP_DATA_DIR}/.data_init_flag" ]]; then
+        LOG_I "Deploying ${APP_NAME} from scratch..."
         echo "$ZOO_SERVER_ID" > "${ZOO_DATA_DIR}/myid"
 
         if is_boolean_yes "$ZOO_ENABLE_AUTH" && [[ $ZOO_SERVER_ID -eq 1 ]] && [[ -n $ZOO_SERVER_USERS ]]; then
             zoo_configure_acl
         fi
-        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/data_init_flag
+        touch ${APP_DATA_DIR}/.data_init_flag
+        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.data_init_flag
     else
-        LOG_I "Deploying ZooKeeper with persisted data..."
+        LOG_I "Deploying ${APP_NAME} with persisted data..."
     fi
 }
 
 # 用户自定义的应用初始化操作，依次执行目录initdb.d中的初始化脚本
-# 执行完毕后，会在 /srv/data/${APP_NAME} 目录中生成 custom_init_flag 文件
+# 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_init_flag
 docker_custom_init() {
-    # 检测用户配置文件目录是否存在initdb.d文件夹，如果存在，尝试执行目录中的初始化脚本
+    LOG_D "Check custom init status of ${APP_NAME}..."
+
+    # 检测用户配置文件目录是否存在 initdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
     if [ -d "/srv/conf/${APP_NAME}/initdb.d" ]; then
-    	# 检测数据存储目录是否存在已初始化标志文件；如果不存在，进行初始化操作
-    	if [ ! -f "/srv/data/${APP_NAME}/custom_init_flag" ]; then
-            LOG_I "Process custom init scripts for ${APP_NAME}..."
+    	# 检测数据存储目录是否存在已初始化标志文件；如果不存在，检索可执行脚本文件并进行初始化操作
+    	if [[ -n $(find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)") ]] && \
+            [[ ! -f "${APP_DATA_DIR}/.custom_init_flag" ]]; then
+            LOG_I "Process custom init scripts from /srv/conf/${APP_NAME}/initdb.d..."
 
-    		# 检测目录权限，防止初始化失败
-    		ls "/srv/conf/${APP_NAME}/initdb.d/" > /dev/null
+            # 检测服务是否运行中；如果未运行，则启动后台服务
+            is_app_server_running || app_start_server_bg
 
-    		docker_process_init_files /srv/conf/${APP_NAME}/initdb.d/*
+            # 检索所有可执行脚本，排序后执行
+    		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)" | sort | while read -r f; do
+                case "$f" in
+                    *.sh)
+                        if [[ -x "$f" ]]; then
+                            LOG_D "Executing $f"; "$f"
+                        else
+                            LOG_D "Sourcing $f"; . "$f"
+                        fi
+                        ;;
+                    *)        LOG_D "Ignoring $f" ;;
+                esac
+            done
 
-    		echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/custom_init_flag
+            touch ${APP_DATA_DIR}/.custom_init_flag
+    		echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.custom_init_flag
     		LOG_I "Custom init for ${APP_NAME} complete."
     	else
     		LOG_I "Custom init for ${APP_NAME} already done before, skipping initialization."
