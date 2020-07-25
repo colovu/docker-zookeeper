@@ -2,3 +2,6 @@
 .gitignore
 README.md
 LICENSE
+*.yml
+*.yaml
+img
