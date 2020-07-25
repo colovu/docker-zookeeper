@@ -1,11 +1,12 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 操作系统控制函数库
 
 # shellcheck disable=SC1091
 
 # 加载依赖项
-. /usr/local/scripts/liblog.sh
+. /usr/local/scripts/liblog.sh          # 日志输出函数库
 
 # 函数列表
 
@@ -57,17 +58,6 @@ ensure_user_exists() {
     fi
 
     usermod -a -G "$group" "$user" >/dev/null 2>&1
-}
-
-# 检测当前用户是否为 root
-# 返回值:
-#   布尔值
-is_run_as_root() {
-    if [[ "$(id -u)" = "0" ]]; then
-        true
-    else
-        false
-    fi
 }
 
 # 获取系统可用内存
@@ -128,6 +118,21 @@ convert_to_mb() {
         fi
     fi
     echo "$amount"
+}
+
+# 如果禁用调试模式，将输出信息重定向至 /dev/null
+# 全局变量:
+#   ENV_DEBUG
+# 参数:
+#   $@ - 待执行的命令
+debug_execute() {
+    local -r bool="${ENV_DEBUG:-false}"
+    shopt -s nocasematch
+    if [[ "$bool" = 1 || "$bool" =~ ^(yes|true)$ ]]; then
+        "$@" >/dev/null 2>&1
+    else
+        "$@"
+    fi   
 }
 
 # 重试执行命令

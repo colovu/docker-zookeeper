@@ -1,4 +1,5 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 从服务器（列表）下载相应软件包
 
@@ -83,7 +84,7 @@ download_dist() {
     if [ -n "$success" ]; then
         if [ -n "$package_sha256" ]; then
             echo "Verifying package whith sha256"
-            echo "$package_sha256  ${name}" | sha256sum --check -
+            echo "$package_sha256 *${name}" | sha256sum --check -
         fi
 
         if [ -n "$pgp_key" ]; then
