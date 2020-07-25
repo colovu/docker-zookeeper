@@ -1,6 +1,8 @@
-FROM colovu/openjdk:11.0.7-jre
+FROM colovu/openjdk:11-jre
 
 ARG zookeeper_ver=3.5.7
+# 编译镜像时指定本地服务器地址，如 "http://172.29.14.108/dist-files/"
+ARG LOCAL_SERVER
 
 ENV APP_NAME=zookeeper \
 	APP_EXEC=zkServer.sh \
@@ -70,7 +72,7 @@ RUN set -eux; \
 # 使用下载(编译)方式安装软件
 	DIST_NAME="wait-for-port-1.0.0-1-linux-amd64-debian-10"; \
 	DIST_URL=" \
-#		http://192.168.1.187/dist-files/ \
+		${LOCAL_SERVER} \
 		https://downloads.bitnami.com/files/stacksmith/ \
 		"; \
 	. /usr/local/scripts/libdownload.sh && download_dist "${DIST_NAME}.tar.gz" "${DIST_URL}"; \
@@ -84,6 +86,7 @@ RUN set -eux; \
 	DIST_NAME="apache-${APP_NAME}-${APP_VERSION}-bin.tar.gz"; \
 	DIST_KEYID="0x3D296268A36FACA1B7EAF110792D43153B5B5147"; \
 	DIST_URL=" \
+		${LOCAL_SERVER} \
 		'https://www.apache.org/dyn/closer.cgi?action=download&filename='${APP_NAME}/${APP_NAME}-${APP_VERSION}/ \
 		https://www-us.apache.org/dist/${APP_NAME}/${APP_NAME}-${APP_VERSION}/ \
 		https://www.apache.org/dist/${APP_NAME}/${APP_NAME}-${APP_VERSION}/ \

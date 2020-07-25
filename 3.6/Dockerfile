@@ -1,4 +1,4 @@
-FROM colovu/openjdk:11.0.7-jre
+FROM colovu/openjdk:11-jre
 
 ARG zookeeper_ver=3.6.1
 
