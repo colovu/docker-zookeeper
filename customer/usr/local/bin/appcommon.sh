@@ -10,6 +10,7 @@
 . /usr/local/scripts/libos.sh
 . /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
+. /usr/local/scripts/libnet.sh
 
 # 函数列表
 
@@ -24,26 +25,21 @@ docker_app_env() {
     cat <<"EOF"
 # Common Settings
 export ENV_DEBUG=${ENV_DEBUG:-false}
+export ALLOW_ANONYMOUS_LOGIN="${ALLOW_ANONYMOUS_LOGIN:-no}"
 
 # Paths
-export ZOO_BASE_DIR="/usr/local/${APP_NAME}"
-export ZOO_DATA_DIR="${APP_DATA_DIR}"
-export ZOO_DATA_LOG_DIR="${APP_DATA_LOG_DIR}"
-export ZOO_CONF_DIR="${APP_CONF_DIR}"
-export ZOO_CONF_FILE="${ZOO_CONF_DIR}/zoo.cfg"
-export ZOO_LOG_DIR="${APP_LOG_DIR}"
-#export ZOO_BIN_DIR="${ZOO_BASE_DIR}/bin"
+export ZOO_CONF_FILE="${APP_CONF_DIR}/zoo.cfg"
 
-# Users
-export ZOO_DAEMON_USER="${APP_USER}"
-export ZOO_DAEMON_GROUP="${APP_GROUP}"
+# Enviroment for zkServer.sh
+export ZOO_LOG_DIR=${APP_LOG_DIR}
+export ZOO_DATADIR=${APP_DATA_DIR}
+export ZOO_DATALOGDIR=${APP_DATA_LOG_DIR}
+export ZOOCFGDIR=${APP_CONF_DIR}
+export ZOOPIDFILE=${APP_RUN_DIR}/zookeeper_server.pid
+export ZOO_LOG4J_PROP="${ZOO_LOG4J_PROP:-INFO,CONSOLE}"
 
-# Cluster configuration
-export ZOO_SERVER_ID="${ZOO_SERVER_ID:-1}"
-export ZOO_PORT_NUMBER="${ZOO_CLIENT_PORT:-2181}"
-export ZOO_SERVERS="${ZOO_SERVERS:-server.1=0.0.0.0:2888:3888}"
-
-# Zookeeper settings
+# Application settings
+export ZOO_PORT_NUMBER="${ZOO_PORT_NUMBER:-2181}"
 export ZOO_TICK_TIME="${ZOO_TICK_TIME:-2000}"
 export ZOO_INIT_LIMIT="${ZOO_INIT_LIMIT:-10}"
 export ZOO_SYNC_LIMIT="${ZOO_SYNC_LIMIT:-5}"
@@ -51,7 +47,6 @@ export ZOO_MAX_CNXNS="${ZOO_MAX_CNXNS:-0}"
 export ZOO_MAX_CLIENT_CNXNS="${ZOO_MAX_CLIENT_CNXNS:-60}"
 export ZOO_AUTOPURGE_PURGEINTERVAL="${ZOO_AUTOPURGE_PURGEINTERVAL:-0}"
 export ZOO_AUTOPURGE_SNAPRETAINCOUNT="${ZOO_AUTOPURGE_SNAPRETAINCOUNT:-3}"
-export ZOO_LOG_LEVEL="${ZOO_LOG_LEVEL:-INFO}"
 export ZOO_4LW_COMMANDS_WHITELIST="${ZOO_4LW_COMMANDS_WHITELIST:-srvr, mntr}"
 export ZOO_RECONFIG_ENABLED="${ZOO_RECONFIG_ENABLED:-no}"
 export ZOO_LISTEN_ALLIPS_ENABLED="${ZOO_LISTEN_ALLIPS_ENABLED:-no}"
@@ -60,7 +55,11 @@ export ZOO_PROMETHEUS_METRICS_PORT_NUMBER="${ZOO_PROMETHEUS_METRICS_PORT_NUMBER:
 export ZOO_STANDALONE_ENABLED=${ZOO_STANDALONE_ENABLED:-true}
 export ZOO_ADMINSERVER_ENABLED=${ZOO_ADMINSERVER_ENABLED:-true}
 
-# Zookeeper TLS Settings
+# Application Cluster configuration
+export ZOO_SERVER_ID="${ZOO_SERVER_ID:-1}"
+export ZOO_SERVERS="${ZOO_SERVERS:-server.1=0.0.0.0:2888:3888}"
+
+# Application TLS Settings
 export ZOO_TLS_CLIENT_ENABLE="${ZOO_TLS_CLIENT_ENABLE:-false}"
 export ZOO_TLS_PORT_NUMBER="${ZOO_TLS_PORT_NUMBER:-3181}"
 export ZOO_TLS_CLIENT_KEYSTORE_FILE="${ZOO_TLS_CLIENT_KEYSTORE_FILE:-}"
@@ -73,33 +72,28 @@ export ZOO_TLS_QUORUM_KEYSTORE_PASSWORD="${ZOO_TLS_QUORUM_KEYSTORE_PASSWORD:-}"
 export ZOO_TLS_QUORUM_TRUSTSTORE_FILE="${ZOO_TLS_QUORUM_TRUSTSTORE_FILE:-}"
 export ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD="${ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD:-}"
 
-# Java settings
-export JVMFLAGS="${ZOO_JVMFLAGS:-}"
-export ZOO_HEAP_SIZE="${ZOO_HEAP_SIZE:-1024}"
+# JVM settings
+export JVMFLAGS="${JVMFLAGS:-}"
+export HEAP_SIZE="${HEAP_SIZE:-1024}"
 
-# Authentication
-export ZOO_ALLOW_ANONYMOUS_LOGIN="${ZOO_ALLOW_ANONYMOUS_LOGIN:-no}"
+# Application Authentication
 export ZOO_ENABLE_AUTH="${ZOO_ENABLE_AUTH:-no}"
 export ZOO_CLIENT_USER="${ZOO_CLIENT_USER:-}"
+export ZOO_CLIENT_PASSWORD="${ZOO_CLIENT_PASSWORD:-}"
 export ZOO_SERVER_USERS="${ZOO_SERVER_USERS:-}"
+export ZOO_SERVER_PASSWORDS="${ZOO_SERVER_PASSWORDS:-}"
 EOF
 
+    # 利用 *_FILE 设置密码，不在配置命令中设置密码，增强安全性
     if [[ -f "${ZOO_CLIENT_PASSWORD_FILE:-}" ]]; then
         cat <<"EOF"
 export ZOO_CLIENT_PASSWORD="$(< "${ZOO_CLIENT_PASSWORD_FILE}")"
 EOF
-    else
-        cat <<"EOF"
-export ZOO_CLIENT_PASSWORD="${ZOO_CLIENT_PASSWORD:-}"
-EOF
     fi
+	
     if [[ -f "${ZOO_SERVER_PASSWORDS_FILE:-}" ]]; then
         cat <<"EOF"
 export ZOO_SERVER_PASSWORDS="$(< "${ZOO_SERVER_PASSWORDS_FILE}")"
-EOF
-    else
-        cat <<"EOF"
-export ZOO_SERVER_PASSWORDS="${ZOO_SERVER_PASSWORDS:-}"
 EOF
     fi
 }
@@ -130,20 +124,20 @@ zoo_common_conf_set() {
             # Update the existing key
             replace_in_file "$file" "^[#\\s]*${key}\s*=.*" "${key}=${value}" false
         else
-            # Add a new key
-            printf '\n%s=%s' "$key" "$value" >>"$file"
+            # 增加一个新的配置项；如果在其他位置有类似操作，需要注意换行
+            printf "\n%s=%s" "$key" "$value" >>"$file"
         fi
     fi
 }
 
 # 更新 server.properties 配置文件中指定变量值
 # 全局变量:
-#   APP_CONF_DIR
+#   ZOO_CONF_FILE
 # 变量:
 #   $1 - 变量
 #   $2 - 值（列表）
 zoo_conf_set() {
-    zoo_common_conf_set "$ZOO_CONF_DIR/zoo.cfg" "$@"
+    zoo_common_conf_set "${ZOO_CONF_FILE}" "$@"
 }
 
 # 更新 log4j.properties 配置文件中指定变量值
@@ -153,7 +147,172 @@ zoo_conf_set() {
 #   $1 - 变量
 #   $2 - 值（列表）
 zoo_log4j_set() {
-    zoo_common_conf_set "$ZOO_CONF_DIR/log4j.properties" "$@"
+    zoo_common_conf_set "${APP_CONF_DIR}/log4j.properties" "$@"
+}
+
+# 生成默认配置文件
+# 全局变量:
+#   ZOO_*
+zoo_generate_conf() {
+    cp "${APP_CONF_DIR}/zoo_sample.cfg" "${ZOO_CONF_FILE}"
+    echo >> "${ZOO_CONF_FILE}"
+
+    zoo_conf_set "tickTime" "${ZOO_TICK_TIME}"
+    zoo_conf_set "initLimit" "${ZOO_INIT_LIMIT}"
+    zoo_conf_set "syncLimit" "${ZOO_SYNC_LIMIT}"
+    zoo_conf_set "dataDir" "$APP_DATA_DIR"
+    zoo_conf_set "dataLogDir" "${APP_DATA_LOG_DIR}"
+    zoo_conf_set "clientPort" "$ZOO_PORT_NUMBER"
+    zoo_conf_set "maxCnxns" "$ZOO_MAX_CNXNS"
+    zoo_conf_set "maxClientCnxns" "$ZOO_MAX_CLIENT_CNXNS"
+    zoo_conf_set "standaloneEnabled" "$ZOO_STANDALONE_ENABLED"
+    zoo_conf_set "reconfigEnabled" "$(is_boolean_yes "$ZOO_RECONFIG_ENABLED" && echo true || echo false)"
+    zoo_conf_set "quorumListenOnAllIPs" "$(is_boolean_yes "$ZOO_LISTEN_ALLIPS_ENABLED" && echo true || echo false)"
+    zoo_conf_set "autopurge.purgeInterval" "$ZOO_AUTOPURGE_PURGEINTERVAL"
+    zoo_conf_set "autopurge.snapRetainCount" "$ZOO_AUTOPURGE_SNAPRETAINCOUNT"
+    zoo_conf_set "4lw.commands.whitelist" "$ZOO_4LW_COMMANDS_WHITELIST"
+
+    if is_boolean_yes "${ZOO_ADMINSERVER_ENABLED}"; then
+        zoo_conf_set "admin.enableServer" true
+        zoo_conf_set "admin.serverAddress" "0.0.0.0"
+        zoo_conf_set "admin.serverPort" 8080
+        zoo_conf_set "admin.idleTimeout" 30000
+        zoo_conf_set "admin.commandURL" "/commands"
+    fi
+
+    # Set log level
+    zoo_log4j_set "zookeeper.root.logger" "$ZOO_LOG4J_PROP"
+    zoo_log4j_set "zookeeper.log.dir" "${APP_LOG_DIR}"
+
+    # Add zookeeper servers to configuration    
+    # key="$(echo "$var" | sed -e 's/^KAFKA_CFG_//g' -e 's/_/\./g' | tr '[:upper:]' '[:lower:]')"
+    #read -r -a zookeeper_servers_list <<< "${ZOO_SERVERS//[;, ]/ }"
+    #read -r -a zookeeper_servers_list <<< "$(tr '\"' '' <<< "${ZOO_SERVERS//[;, ]/ }")"
+    #tmp_servers_list="$(echo ${ZOO_SERVERS//[;, ]/ } | sed -e 's/^\"//g' -e 's/\"$//g')" 
+    read -r -a zookeeper_servers_list <<< "$(echo ${ZOO_SERVERS//[;, ]/ } | sed -e 's/^\"//g' -e 's/\"$//g')"
+    if [[ ${#zookeeper_servers_list[@]} -gt 1 ]]; then
+#        local i=1
+        for server in "${zookeeper_servers_list[@]}"; do
+            LOG_I "Adding server: ${server}"
+            read -r -a server_info <<< "${server//=/ }"
+            zoo_conf_set "${server_info[0]}" "${server_info[1]};${ZOO_PORT_NUMBER}"
+#            (( i++ ))
+        done
+    else
+        LOG_I "No additional servers were specified. ZooKeeper will run in standalone mode..."
+    fi
+
+    # If TLS in enable
+    if is_boolean_yes "${ZOO_TLS_CLIENT_ENABLE}"; then
+        zoo_conf_set "client.secure" true
+        zoo_conf_set "secureClientPort" "$ZOO_TLS_PORT_NUMBER"
+        zoo_conf_set "serverCnxnFactory" "org.apache.zookeeper.server.NettyServerCnxnFactory"
+        zoo_conf_set "ssl.keyStore.location" "$ZOO_TLS_CLIENT_KEYSTORE_FILE"
+        zoo_conf_set "ssl.keyStore.password" "$ZOO_TLS_CLIENT_KEYSTORE_PASSWORD"
+        zoo_conf_set "ssl.trustStore.location" "$ZOO_TLS_CLIENT_TRUSTSTORE_FILE"
+        zoo_conf_set "ssl.trustStore.password" "$ZOO_TLS_CLIENT_TRUSTSTORE_PASSWORD"
+    fi
+    if is_boolean_yes "${ZOO_TLS_QUORUM_ENABLE}"; then
+        zoo_conf_set "sslQuorum" true
+        zoo_conf_set "serverCnxnFactory" "org.apache.zookeeper.server.NettyServerCnxnFactory"
+        zoo_conf_set "ssl.quorum.keyStore.location" "$ZOO_TLS_QUORUM_KEYSTORE_FILE"
+        zoo_conf_set "ssl.quorum.keyStore.password" "$ZOO_TLS_QUORUM_KEYSTORE_PASSWORD"
+        zoo_conf_set "ssl.quorum.trustStore.location" "$ZOO_TLS_QUORUM_TRUSTSTORE_FILE"
+        zoo_conf_set "ssl.quorum.trustStore.password" "$ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD"
+    fi
+}
+
+# 设置环境变量 JVMFLAGS
+# 全局变量:
+#   JVMFLAGS
+# 参数:
+#   $1 - value
+zoo_export_jvmflags() {
+    local -r value="${1:?value is required}"
+
+    export JVMFLAGS="${JVMFLAGS} ${value}"
+    echo "export JVMFLAGS=\"${JVMFLAGS}\"" > "${APP_CONF_DIR}/java.env"
+}
+
+# 配置 HEAP 大小
+# 全局变量:
+#   JVMFLAGS
+# 参数:
+#   $1 - HEAP 大小
+zoo_configure_heap_size() {
+    local -r heap_size="${1:?heap_size is required}"
+
+    if [[ "$JVMFLAGS" =~ -Xm[xs].*-Xm[xs] ]]; then
+        LOG_D "Using specified values (JVMFLAGS=${JVMFLAGS})"
+    else
+        LOG_D "Setting '-Xmx${heap_size}m -Xms${heap_size}m' heap options..."
+        zoo_export_jvmflags "-Xmx${heap_size}m -Xms${heap_size}m"
+    fi
+}
+
+# 配置 ACL 参数
+# 全局变量:
+#   ZOO_*
+zoo_configure_acl() {
+    local acl_string=""
+    for server_user in ${ZOO_SERVER_USERS//[;, ]/ }; do
+        acl_string="${acl_string},sasl:${server_user}:crdwa"
+    done
+    acl_string="${acl_string#,}"
+
+    for path in / /zookeeper /zookeeper/quota; do
+        LOG_I "Setting the ACL rule '${acl_string}' in ${path}"
+        retry_while "zkCli.sh setAcl ${path} ${acl_string}" 80
+    done
+}
+
+# 配置 zookeeper 启用认证
+zoo_enable_authentication() {
+    LOG_I "Enabling authentication..."
+    zoo_conf_set "authProvider.1" "org.apache.zookeeper.server.auth.SASLAuthenticationProvider"
+    zoo_conf_set "requireClientAuthScheme" sasl
+}
+
+# 为 zookeeper 认证创建 JAAS 配置文件
+# 全局变量:
+#   JVMFLAGS, ZOO_*
+zoo_create_jaas_file() {
+    LOG_I "Creating jaas file..."
+    read -r -a server_users_list <<< "${ZOO_SERVER_USERS//[;, ]/ }"
+    read -r -a server_passwords_list <<< "${ZOO_SERVER_PASSWORDS//[;, ]/ }"
+
+    local zoo_server_user_passwords=""
+    for i in $(seq 0 $(( ${#server_users_list[@]} - 1 ))); do
+        zoo_server_user_passwords="${zoo_server_user_passwords}\n   user_${server_users_list[i]}=\"${server_passwords_list[i]}\""
+    done
+    zoo_server_user_passwords="${zoo_server_user_passwords#\\n   };"
+
+    cat >"${APP_CONF_DIR}/zoo_jaas.conf" <<EOF
+Client {
+    org.apache.zookeeper.server.auth.DigestLoginModule required
+    username="$ZOO_CLIENT_USER"
+    password="$ZOO_CLIENT_PASSWORD";
+};
+Server {
+    org.apache.zookeeper.server.auth.DigestLoginModule required
+    $(echo -e -n "${zoo_server_user_passwords}")
+};
+EOF
+    zoo_export_jvmflags "-Djava.security.auth.login.config=${APP_CONF_DIR}/zoo_jaas.conf"
+
+    # Restrict file permissions
+    _is_run_as_root && ensure_owned_by "${APP_CONF_DIR}/zoo_jaas.conf" "$APP_NAME"
+    chmod 400 "${APP_CONF_DIR}/zoo_jaas.conf"
+}
+
+# Enable Prometheus metrics for ZooKeeper
+# 全局变量:
+#   ZOO_PROMETHEUS_METRICS_PORT_NUMBER
+zoo_enable_prometheus_metrics() {
+    LOG_I "Enabling Prometheus metrics..."
+    zoo_conf_set "metricsProvider.className" "org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider"
+    zoo_conf_set "metricsProvider.httpPort" "${ZOO_PROMETHEUS_METRICS_PORT_NUMBER}"
+    zoo_conf_set "metricsProvider.exportJvmInfo" true
 }
 
 # 检测用户参数信息是否满足条件
@@ -169,10 +328,10 @@ app_verify_minimum_env() {
     }
 
     # ZooKeeper authentication validations
-    if is_boolean_yes "$ZOO_ALLOW_ANONYMOUS_LOGIN"; then
-        LOG_W "You have set the environment variable ZOO_ALLOW_ANONYMOUS_LOGIN=${ZOO_ALLOW_ANONYMOUS_LOGIN}. For safety reasons, do not use this flag in a production environment."
-    elif ! is_boolean_yes "$ZOO_ENABLE_AUTH"; then
-        print_validation_error "The ZOO_ENABLE_AUTH environment variable does not configure authentication. Set the environment variable ZOO_ALLOW_ANONYMOUS_LOGIN=yes to allow unauthenticated users to connect to ZooKeeper."
+    if is_boolean_yes "$ALLOW_ANONYMOUS_LOGIN"; then
+        LOG_W "You have set the environment variable ALLOW_ANONYMOUS_LOGIN=${ALLOW_ANONYMOUS_LOGIN}. For safety reasons, do not use this flag in a production environment."
+    elif ! is_boolean_yes "${ZOO_ENABLE_AUTH}"; then
+        print_validation_error "The ZOO_ENABLE_AUTH environment variable does not configure authentication. Set the environment variable ALLOW_ANONYMOUS_LOGIN=yes to allow unauthenticated users to connect to ZooKeeper."
     fi
 
     # ZooKeeper port validations
@@ -221,234 +380,113 @@ app_verify_minimum_env() {
     [[ "$error_code" -eq 0 ]] || exit "$error_code"
 }
 
-# 加载在后续脚本命令中使用的参数信息，包括从"*_FILE"文件中导入的配置
-# 必须在其他函数使用前调用
-docker_setup_env() {
-	# 尝试从文件获取环境变量的值
-	# file_env 'ENV_VAR_NAME'
-
-	# 尝试从文件获取环境变量的值，如果不存在，使用默认值 default_val 
-	# file_env 'ENV_VAR_NAME' 'default_val'
-
-	# 检测变量 ENV_VAR_NAME 未定义或值为空，赋值为默认值：default_val
-	# : "${ENV_VAR_NAME:=default_val}"
-    : 
+# 更改默认监听地址为 "*" 或 "0.0.0.0"，以对容器外提供服务；默认配置文件应当为仅监听 localhost(127.0.0.1)
+app_enable_remote_connections() {
+    LOG_D "Modify default config to enable all IP access"
+	
 }
 
-# 生成默认配置文件
+# 以后台方式启动应用服务，并等待启动就绪
 # 全局变量:
 #   ZOO_*
-zoo_generate_conf() {
-    cp "${ZOO_CONF_DIR}/zoo_sample.cfg" "$ZOO_CONF_FILE"
-    echo >> "$ZOO_CONF_FILE"
+app_start_server_bg() {
+    is_app_server_running && return
+    LOG_I "Starting ${APP_NAME} in background..."
 
-    zoo_conf_set "tickTime" "$ZOO_TICK_TIME"
-    zoo_conf_set "initLimit" "$ZOO_INIT_LIMIT"
-    zoo_conf_set "syncLimit" "$ZOO_SYNC_LIMIT"
-    zoo_conf_set "dataDir" "$ZOO_DATA_DIR"
-    zoo_conf_set "dataLogDir" "${ZOO_DATA_LOG_DIR}"
-    zoo_conf_set "clientPort" "$ZOO_PORT_NUMBER"
-    zoo_conf_set "maxCnxns" "$ZOO_MAX_CNXNS"
-    zoo_conf_set "maxClientCnxns" "$ZOO_MAX_CLIENT_CNXNS"
-    zoo_conf_set "standaloneEnabled" "$ZOO_STANDALONE_ENABLED"
-    zoo_conf_set "reconfigEnabled" "$(is_boolean_yes "$ZOO_RECONFIG_ENABLED" && echo true || echo false)"
-    zoo_conf_set "quorumListenOnAllIPs" "$(is_boolean_yes "$ZOO_LISTEN_ALLIPS_ENABLED" && echo true || echo false)"
-    zoo_conf_set "autopurge.purgeInterval" "$ZOO_AUTOPURGE_PURGEINTERVAL"
-    zoo_conf_set "autopurge.snapRetainCount" "$ZOO_AUTOPURGE_SNAPRETAINCOUNT"
-    zoo_conf_set "4lw.commands.whitelist" "$ZOO_4LW_COMMANDS_WHITELIST"
-
-    if is_boolean_yes "${ZOO_ADMINSERVER_ENABLED}"; then
-        zoo_conf_set "admin.enableServer" true
-        zoo_conf_set "admin.serverAddress" "0.0.0.0"
-        zoo_conf_set "admin.serverPort" 8080
-        zoo_conf_set "admin.idleTimeout" 30000
-        zoo_conf_set "admin.commandURL" "/commands"
-    fi
-
-    # Set log level
-    zoo_log4j_set "zookeeper.console.threshold" "$ZOO_LOG_LEVEL"
-    zoo_log4j_set "zookeeper.log.dir" "${ZOO_LOG_DIR}"
-
-    # Add zookeeper servers to configuration
-    read -r -a zookeeper_servers_list <<< "${ZOO_SERVERS//[;, ]/ }"
-    if [[ ${#zookeeper_servers_list[@]} -gt 1 ]]; then
-#        local i=1
-        for server in "${zookeeper_servers_list[@]}"; do
-            LOG_I "Adding server: ${server}"
-            read -r -a server_info <<< "${server//=/ }"
-            zoo_conf_set "${server_info[0]}" "${server_info[1]};${ZOO_PORT_NUMBER}"
-#            (( i++ ))
-        done
-    else
-        LOG_I "No additional servers were specified. ZooKeeper will run in standalone mode..."
-    fi
-
-    # If TLS in enable
-    if is_boolean_yes "${ZOO_TLS_CLIENT_ENABLE}"; then
-        zoo_conf_set "client.secure" true
-        zoo_conf_set "secureClientPort" "$ZOO_TLS_PORT_NUMBER"
-        zoo_conf_set "serverCnxnFactory" "org.apache.zookeeper.server.NettyServerCnxnFactory"
-        zoo_conf_set "ssl.keyStore.location" "$ZOO_TLS_CLIENT_KEYSTORE_FILE"
-        zoo_conf_set "ssl.keyStore.password" "$ZOO_TLS_CLIENT_KEYSTORE_PASSWORD"
-        zoo_conf_set "ssl.trustStore.location" "$ZOO_TLS_CLIENT_TRUSTSTORE_FILE"
-        zoo_conf_set "ssl.trustStore.password" "$ZOO_TLS_CLIENT_TRUSTSTORE_PASSWORD"
-    fi
-    if is_boolean_yes "${ZOO_TLS_QUORUM_ENABLE}"; then
-        zoo_conf_set "sslQuorum" true
-        zoo_conf_set "serverCnxnFactory" "org.apache.zookeeper.server.NettyServerCnxnFactory"
-        zoo_conf_set "ssl.quorum.keyStore.location" "$ZOO_TLS_QUORUM_KEYSTORE_FILE"
-        zoo_conf_set "ssl.quorum.keyStore.password" "$ZOO_TLS_QUORUM_KEYSTORE_PASSWORD"
-        zoo_conf_set "ssl.quorum.trustStore.location" "$ZOO_TLS_QUORUM_TRUSTSTORE_FILE"
-        zoo_conf_set "ssl.quorum.trustStore.password" "$ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD"
-    fi
-}
-
-# 设置环境变量 JVMFLAGS
-# 全局变量:
-#   JVMFLAGS
-# 参数:
-#   $1 - value
-zoo_export_jvmflags() {
-    local -r value="${1:?value is required}"
-
-    export JVMFLAGS="${JVMFLAGS} ${value}"
-    echo "export JVMFLAGS=\"${JVMFLAGS}\"" > "${ZOO_CONF_DIR}/java.env"
-}
-
-# 配置 HEAP 大小
-# 全局变量:
-#   JVMFLAGS
-# 参数:
-#   $1 - HEAP 大小
-zoo_configure_heap_size() {
-    local -r heap_size="${1:?heap_size is required}"
-
-    if [[ "$JVMFLAGS" =~ -Xm[xs].*-Xm[xs] ]]; then
-        LOG_D "Using specified values (JVMFLAGS=${JVMFLAGS})"
-    else
-        LOG_D "Setting '-Xmx${heap_size}m -Xms${heap_size}m' heap options..."
-        zoo_export_jvmflags "-Xmx${heap_size}m -Xms${heap_size}m"
-    fi
-}
-
-# 配置 zookeeper 启用认证
-# 全局变量:
-#   ZOO_CONF_FILE
-zoo_enable_authentication() {
-    LOG_I "Enabling authentication..."
-    zoo_conf_set "authProvider.1" "org.apache.zookeeper.server.auth.SASLAuthenticationProvider"
-    zoo_conf_set "requireClientAuthScheme" sasl
-}
-
-# 为 zookeeper 认证创建 JAAS 配置文件
-# 全局变量:
-#   JVMFLAGS, ZOO_*
-zoo_create_jaas_file() {
-    LOG_I "Creating jaas file..."
-    read -r -a server_users_list <<< "${ZOO_SERVER_USERS//[;, ]/ }"
-    read -r -a server_passwords_list <<< "${ZOO_SERVER_PASSWORDS//[;, ]/ }"
-
-    local zoo_server_user_passwords=""
-    for i in $(seq 0 $(( ${#server_users_list[@]} - 1 ))); do
-        zoo_server_user_passwords="${zoo_server_user_passwords}\n   user_${server_users_list[i]}=\"${server_passwords_list[i]}\""
-    done
-    zoo_server_user_passwords="${zoo_server_user_passwords#\\n   };"
-
-    cat >"${ZOO_CONF_DIR}/zoo_jaas.conf" <<EOF
-Client {
-    org.apache.zookeeper.server.auth.DigestLoginModule required
-    username="$ZOO_CLIENT_USER"
-    password="$ZOO_CLIENT_PASSWORD";
-};
-Server {
-    org.apache.zookeeper.server.auth.DigestLoginModule required
-    $(echo -e -n "${zoo_server_user_passwords}")
-};
-EOF
-    zoo_export_jvmflags "-Djava.security.auth.login.config=${ZOO_CONF_DIR}/zoo_jaas.conf"
-
-    # Restrict file permissions
-    _is_run_as_root && ensure_owned_by "${ZOO_CONF_DIR}/zoo_jaas.conf" "$ZOO_DAEMON_USER"
-    chmod 400 "${ZOO_CONF_DIR}/zoo_jaas.conf"
-}
-
-# Enable Prometheus metrics for ZooKeeper
-# 全局变量:
-#   ZOO_PROMETHEUS_METRICS_PORT_NUMBER
-#   ZOO_CONF_FILE
-zoo_enable_prometheus_metrics() {
-    LOG_I "Enabling Prometheus metrics..."
-    zoo_conf_set "metricsProvider.className" "org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider"
-    zoo_conf_set "metricsProvider.httpPort" "$ZOO_PROMETHEUS_METRICS_PORT_NUMBER"
-    zoo_conf_set "metricsProvider.exportJvmInfo" true
-}
-
-# 以后台方式启动Zookeeper服务，并等待启动就绪
-# 全局变量:
-#   ZOO_*
-zoo_start_server_bg() {
+	# 使用内置脚本启动服务
     local start_command="zkServer.sh start"
-    LOG_I "Starting ZooKeeper in background..."
-    _is_run_as_root && start_command="gosu ${ZOO_DAEMON_USER} ${start_command}"
     if is_boolean_yes "${ENV_DEBUG}"; then
-        $start_command
+        $start_command &
     else
-        $start_command >/dev/null 2>&1
+        $start_command >/dev/null 2>&1 &
     fi
-    # 检测端口是否就绪
+
+    sleep 1
+	# 通过命令或特定端口检测应用是否就绪
+    LOG_I "Checking ${APP_NAME} ready status..."
     wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
+
+    LOG_D "${APP_NAME} is ready for service..."
 }
 
-########################
-# Stop ZooKeeper
-# Globals:
-#   ZOO_*
-# Arguments:
-#   None
-# Returns:
-#   None
-#########################
-zoo_stop_server() {
-    LOG_I "Stopping ZooKeeper..."
+# 停止应用服务
+# 全局变量:
+#   APP_*
+app_stop_server() {
+    #is_app_server_running || return
+    LOG_I "Stopping ${APP_NAME}..."
+    # 使用内置脚本关闭服务
     if [[ "$ENV_DEBUG" = true ]]; then
         "zkServer.sh" stop
     else
         "zkServer.sh" stop >/dev/null 2>&1
     fi
+	
+	# 检测停止是否完成
+	local counter=10
+    while [[ "$counter" -ne 0 ]] && is_app_server_running; do
+        LOG_D "Waiting for ${APP_NAME} to stop..."
+        sleep 1
+        counter=$((counter - 1))
+    done
 }
 
-# 配置 ACL 参数
+# 检测应用服务是否在后台运行中
 # 全局变量:
 #   ZOO_*
-zoo_configure_acl() {
-    local acl_string=""
-    for server_user in ${ZOO_SERVER_USERS//[;, ]/ }; do
-        acl_string="${acl_string},sasl:${server_user}:crdwa"
+# 返回值:
+#   布尔值
+is_app_server_running() {
+    LOG_D "Check if ${APP_NAME} is running..."
+    local pid
+    pid="$(get_pid_from_file ${ZOOPIDFILE})"
+
+    LOG_D " PID from ${ZOOPIDFILE}: ${pid}"
+    if [[ -z "${pid}" ]]; then
+        false
+    else
+        is_service_running "${pid}"
+    fi
+}
+
+# 清理初始化应用时生成的临时文件
+app_clean_tmp_file() {
+    LOG_D "Clean ${APP_NAME} tmp files for init..."
+
+    # 需要删除初始化时生成的日志文件，否则应用启动会报错
+    rm -rf ${APP_LOG_DIR}/*.out 
+#    [[ ! -f "${APP_LOG_DIR}/zookeeper.out" ]] || mv "${APP_LOG_DIR}/zookeeper.out" "${APP_LOG_DIR}/zookeeper.out.firstboot"
+}
+
+# 在重新启动容器时，删除标志文件及必须删除的临时文件 (容器重新启动)
+# 全局变量:
+#   APP_*
+app_clean_from_restart() {
+    LOG_D "Clean ${APP_NAME} tmp files for restart..."
+    local -r -a files=(
+        "${ZOOPIDFILE}"
+    )
+
+    for file in ${files[@]}; do
+        if [[ -f "$file" ]]; then
+            LOG_I "Cleaning stale $file file"
+            rm "$file"
+        fi
     done
-    acl_string="${acl_string#,}"
-
-    zoo_start_server_bg
-
-    for path in / /zookeeper /zookeeper/quota; do
-        LOG_I "Setting the ACL rule '${acl_string}' in ${path}"
-        retry_while "${ZOO_BIN_DIR}/zkCli.sh setAcl ${path} ${acl_string}" 80
-    done
-
-    zoo_stop_server
-    mv "${ZOO_LOG_DIR}/zookeeper.out" "${ZOO_LOG_DIR}/zookeeper.out.firstboot"
 }
 
 # 应用默认初始化操作
 # 执行完毕后，生成文件 ${APP_CONF_DIR}/.app_init_flag 及 ${APP_DATA_DIR}/.data_init_flag 文件
 docker_app_init() {
+	app_clean_from_restart
     LOG_D "Check init status of ${APP_NAME}..."
 
     # 检测配置文件是否存在
     if [[ ! -f "${APP_CONF_DIR}/.app_init_flag" ]]; then
         LOG_I "No injected configuration file found, creating default config files..."
         zoo_generate_conf
-        zoo_configure_heap_size "$ZOO_HEAP_SIZE"
-        if is_boolean_yes "$ZOO_ENABLE_AUTH"; then
+        zoo_configure_heap_size "$HEAP_SIZE"
+        if is_boolean_yes "${ZOO_ENABLE_AUTH}"; then
             zoo_enable_authentication
             zoo_create_jaas_file
         fi
@@ -464,9 +502,12 @@ docker_app_init() {
 
     if [[ ! -f "${APP_DATA_DIR}/.data_init_flag" ]]; then
         LOG_I "Deploying ${APP_NAME} from scratch..."
-        echo "$ZOO_SERVER_ID" > "${ZOO_DATA_DIR}/myid"
+        echo "${ZOO_SERVER_ID}" > "${APP_DATA_DIR}/myid"
 
-        if is_boolean_yes "$ZOO_ENABLE_AUTH" && [[ $ZOO_SERVER_ID -eq 1 ]] && [[ -n $ZOO_SERVER_USERS ]]; then
+		# 检测服务是否运行中如果未运行，则启动后台服务
+        is_app_server_running || app_start_server_bg
+
+        if is_boolean_yes "${ZOO_ENABLE_AUTH}" && [[ ${ZOO_SERVER_ID} -eq 1 ]] && [[ -n ${ZOO_SERVER_USERS} ]]; then
             zoo_configure_acl
         fi
         touch ${APP_DATA_DIR}/.data_init_flag
@@ -512,4 +553,13 @@ docker_custom_init() {
     		LOG_I "Custom init for ${APP_NAME} already done before, skipping initialization."
     	fi
     fi
+
+    # 检测服务是否运行中；如果运行，则停止后台服务
+	is_app_server_running && app_stop_server
+
+    # 删除第一次运行生成的临时文件
+    app_clean_tmp_file
+
+	# 绑定所有 IP ，启用远程访问
+    app_enable_remote_connections
 }
