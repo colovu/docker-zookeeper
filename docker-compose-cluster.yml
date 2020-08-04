@@ -1,5 +1,6 @@
 version: '3.6'
 
+# 伪集群方式配置时，各服务对外暴露的端口在映射到主机时，需要使用不同的端口，否则会导致端口冲突
 services:
   zoo1:
     image: colovu/zookeeper:latest
@@ -9,7 +10,7 @@ services:
       - 2181:2181
     environment:
       - ZOO_SERVER_ID=1
-      - ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes
       - ZOO_LISTEN_ALLIPS_ENABLED=yes
       - ZOO_SERVERS=server.1=0.0.0.0:2888:3888,server.2=zoo2:2888:3888,server.3=zoo3:2888:3888
 
@@ -21,7 +22,7 @@ services:
       - 2182:2181
     environment:
       - ZOO_SERVER_ID=2
-      - ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes
       - ZOO_LISTEN_ALLIPS_ENABLED=yes
       - ZOO_SERVERS=server.1=zoo1:2888:3888,server.2=0.0.0.0:2888:3888,server.3=zoo3:2888:3888
 
@@ -33,6 +34,6 @@ services:
       - 2183:2181
     environment:
       - ZOO_SERVER_ID=3
-      - ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes
       - ZOO_LISTEN_ALLIPS_ENABLED=yes
       - ZOO_SERVERS=server.1=zoo1:2888:3888,server.2=zoo2:2888:3888,server.3=0.0.0.0:2888:3888

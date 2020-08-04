@@ -1,7 +1,12 @@
 .git
 .gitignore
-README.md
-LICENSE
+
+./alpine
+./Makefile
+
 *.yml
 *.yaml
-img
+
+./LICENSE
+./README.md
+./img
