@@ -1,9 +1,9 @@
-version: '3.6'
+version: '3.8'
 
 # 伪集群方式配置时，各服务对外暴露的端口在映射到主机时，需要使用不同的端口，否则会导致端口冲突
 services:
   zoo1:
-    image: colovu/zookeeper:latest
+    image: colovu/zookeeper:3.5
     restart: always
     ports:
       - 2181:2181
@@ -14,7 +14,7 @@ services:
       - ZOO_SERVERS=server.1=0.0.0.0:2888:3888,server.2=zoo2:2888:3888,server.3=zoo3:2888:3888
 
   zoo2:
-    image: colovu/zookeeper:latest
+    image: colovu/zookeeper:3.5
     restart: always
     ports:
       - 2182:2181
@@ -25,8 +25,8 @@ services:
       - ZOO_SERVERS=server.1=zoo1:2888:3888,server.2=0.0.0.0:2888:3888,server.3=zoo3:2888:3888
 
   zoo3:
-    image: colovu/zookeeper:latest
-    hostname: zoo3
+    image: colovu/zookeeper:3.5
+    restart: always
     ports:
       - 2183:2181
     environment:
