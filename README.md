@@ -10,12 +10,12 @@
 
 **版本信息**：
 
-- 3.6、3.6.1、latest
-- 3.5、3.5.7
+- 3.6、latest
+- 3.5
 
 **镜像信息**
 
-* 镜像地址：colovu/zookeeper:latest
+* 镜像地址：colovu/zookeeper
 
 
 
@@ -24,7 +24,7 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d --name zookeeper colovu/zookeeper:latest
+$ docker run -d colovu/zookeeper
 ```
 
 Docker-Compose 快速启动命令：
@@ -55,10 +55,10 @@ $ docker-compose up -d
 镜像默认提供以下数据卷定义，默认数据分别存储在自动生成的应用名对应`zookeeper`子目录中：
 
 ```shell
-/var/log			# 日志输出，应用日志输出，非数据日志输出；自动创建子目录zookeeper
-/srv/conf			# 配置文件；自动创建子目录zookeeper
-/srv/data			# 数据文件；自动创建子目录zookeeper
-/srv/datalog	# 数据操作日志文件；自动创建子目录zookeeper
+/var/log                # 日志输出，应用日志输出，非数据日志输出；自动创建子目录zookeeper
+/srv/conf               # 配置文件；自动创建子目录zookeeper
+/srv/data               # 数据文件；自动创建子目录zookeeper
+/srv/datalog            # 数据操作日志文件；自动创建子目录zookeeper
 ```
 
 如果需要持久化存储相应数据，需要**在宿主机建立本地目录**，并在使用镜像初始化容器时进行映射。宿主机相关的目录中如果不存在对应应用 Zookeeper 的子目录或相应数据文件，则容器会在初始化时创建相应目录及文件。
@@ -225,8 +225,8 @@ services:
 
 ## 更新记录
 
-- 3.6.1、latest
-- 3.5.7
+- 3.6、latest
+- 3.5
 
 
 
