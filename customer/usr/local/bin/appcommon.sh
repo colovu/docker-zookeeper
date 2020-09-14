@@ -5,12 +5,12 @@
 
 # 加载依赖脚本
 . /usr/local/scripts/libcommon.sh       # 通用函数库
+
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
 . /usr/local/scripts/libos.sh
 . /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
-. /usr/local/scripts/libnet.sh
 
 # 函数列表
 
@@ -21,79 +21,79 @@
 #   *_* : 应用配置文件使用的全局变量，变量名根据配置项定义
 # 返回值:
 #   可以被 'eval' 使用的序列化输出
-docker_app_env() {
-    cat <<"EOF"
-# Common Settings
-export ENV_DEBUG=${ENV_DEBUG:-false}
-export ALLOW_ANONYMOUS_LOGIN="${ALLOW_ANONYMOUS_LOGIN:-no}"
+app_env() {
+    cat <<-'EOF'
+		# Common Settings
+		export ENV_DEBUG=${ENV_DEBUG:-false}
+		export ALLOW_ANONYMOUS_LOGIN="${ALLOW_ANONYMOUS_LOGIN:-no}"
 
-# Paths
-export ZOO_CONF_FILE="${APP_CONF_DIR}/zoo.cfg"
+		# Paths configuration
+		export ZOO_CONF_FILE="${APP_CONF_DIR}/zoo.cfg"
 
-# Enviroment for zkServer.sh
-export ZOO_LOG_DIR=${APP_LOG_DIR}
-export ZOO_DATADIR=${APP_DATA_DIR}
-export ZOO_DATALOGDIR=${APP_DATA_LOG_DIR}
-export ZOOCFGDIR=${APP_CONF_DIR}
-export ZOOPIDFILE=${APP_RUN_DIR}/zookeeper_server.pid
-export ZOO_LOG4J_PROP="${ZOO_LOG4J_PROP:-INFO,CONSOLE}"
+		# Enviroment for zkServer.sh
+		export ZOO_LOG_DIR=${APP_LOG_DIR}
+		export ZOO_DATADIR=${APP_DATA_DIR}
+		export ZOO_DATALOGDIR=${APP_DATA_LOG_DIR}
+		export ZOOCFGDIR=${APP_CONF_DIR}
+		export ZOOPIDFILE=${APP_RUN_DIR}/zookeeper_server.pid
+		export ZOO_LOG4J_PROP="${ZOO_LOG4J_PROP:-INFO,CONSOLE}"
 
-# Application settings
-export ZOO_PORT_NUMBER="${ZOO_PORT_NUMBER:-2181}"
-export ZOO_TICK_TIME="${ZOO_TICK_TIME:-2000}"
-export ZOO_INIT_LIMIT="${ZOO_INIT_LIMIT:-10}"
-export ZOO_SYNC_LIMIT="${ZOO_SYNC_LIMIT:-5}"
-export ZOO_MAX_CNXNS="${ZOO_MAX_CNXNS:-0}"
-export ZOO_MAX_CLIENT_CNXNS="${ZOO_MAX_CLIENT_CNXNS:-60}"
-export ZOO_AUTOPURGE_PURGEINTERVAL="${ZOO_AUTOPURGE_PURGEINTERVAL:-0}"
-export ZOO_AUTOPURGE_SNAPRETAINCOUNT="${ZOO_AUTOPURGE_SNAPRETAINCOUNT:-3}"
-export ZOO_4LW_COMMANDS_WHITELIST="${ZOO_4LW_COMMANDS_WHITELIST:-srvr, mntr}"
-export ZOO_RECONFIG_ENABLED="${ZOO_RECONFIG_ENABLED:-no}"
-export ZOO_LISTEN_ALLIPS_ENABLED="${ZOO_LISTEN_ALLIPS_ENABLED:-no}"
-export ZOO_ENABLE_PROMETHEUS_METRICS="${ZOO_ENABLE_PROMETHEUS_METRICS:-no}"
-export ZOO_PROMETHEUS_METRICS_PORT_NUMBER="${ZOO_PROMETHEUS_METRICS_PORT_NUMBER:-7000}"
-export ZOO_STANDALONE_ENABLED=${ZOO_STANDALONE_ENABLED:-true}
-export ZOO_ADMINSERVER_ENABLED=${ZOO_ADMINSERVER_ENABLED:-true}
+		# Application settings
+		export ZOO_PORT_NUMBER="${ZOO_PORT_NUMBER:-2181}"
+		export ZOO_TICK_TIME="${ZOO_TICK_TIME:-2000}"
+		export ZOO_INIT_LIMIT="${ZOO_INIT_LIMIT:-10}"
+		export ZOO_SYNC_LIMIT="${ZOO_SYNC_LIMIT:-5}"
+		export ZOO_MAX_CNXNS="${ZOO_MAX_CNXNS:-0}"
+		export ZOO_MAX_CLIENT_CNXNS="${ZOO_MAX_CLIENT_CNXNS:-60}"
+		export ZOO_AUTOPURGE_PURGEINTERVAL="${ZOO_AUTOPURGE_PURGEINTERVAL:-0}"
+		export ZOO_AUTOPURGE_SNAPRETAINCOUNT="${ZOO_AUTOPURGE_SNAPRETAINCOUNT:-3}"
+		export ZOO_4LW_COMMANDS_WHITELIST="${ZOO_4LW_COMMANDS_WHITELIST:-srvr, mntr}"
+		export ZOO_RECONFIG_ENABLED="${ZOO_RECONFIG_ENABLED:-no}"
+		export ZOO_LISTEN_ALLIPS_ENABLED="${ZOO_LISTEN_ALLIPS_ENABLED:-no}"
+		export ZOO_ENABLE_PROMETHEUS_METRICS="${ZOO_ENABLE_PROMETHEUS_METRICS:-no}"
+		export ZOO_PROMETHEUS_METRICS_PORT_NUMBER="${ZOO_PROMETHEUS_METRICS_PORT_NUMBER:-7000}"
+		export ZOO_STANDALONE_ENABLED=${ZOO_STANDALONE_ENABLED:-true}
+		export ZOO_ADMINSERVER_ENABLED=${ZOO_ADMINSERVER_ENABLED:-true}
 
-# Application Cluster configuration
-export ZOO_SERVER_ID="${ZOO_SERVER_ID:-1}"
-export ZOO_SERVERS="${ZOO_SERVERS:-server.1=0.0.0.0:2888:3888}"
+		# Cluster configuration
+		export ZOO_SERVER_ID="${ZOO_SERVER_ID:-1}"
+		export ZOO_SERVERS="${ZOO_SERVERS:-server.1=0.0.0.0:2888:3888}"
 
-# Application TLS Settings
-export ZOO_TLS_CLIENT_ENABLE="${ZOO_TLS_CLIENT_ENABLE:-false}"
-export ZOO_TLS_PORT_NUMBER="${ZOO_TLS_PORT_NUMBER:-3181}"
-export ZOO_TLS_CLIENT_KEYSTORE_FILE="${ZOO_TLS_CLIENT_KEYSTORE_FILE:-}"
-export ZOO_TLS_CLIENT_KEYSTORE_PASSWORD="${ZOO_TLS_CLIENT_KEYSTORE_PASSWORD:-}"
-export ZOO_TLS_CLIENT_TRUSTSTORE_FILE="${ZOO_TLS_CLIENT_TRUSTSTORE_FILE:-}"
-export ZOO_TLS_CLIENT_TRUSTSTORE_PASSWORD="${ZOO_TLS_CLIENT_TRUSTSTORE_PASSWORD:-}"
-export ZOO_TLS_QUORUM_ENABLE="${ZOO_TLS_QUORUM_ENABLE:-false}"
-export ZOO_TLS_QUORUM_KEYSTORE_FILE="${ZOO_TLS_QUORUM_KEYSTORE_FILE:-}"
-export ZOO_TLS_QUORUM_KEYSTORE_PASSWORD="${ZOO_TLS_QUORUM_KEYSTORE_PASSWORD:-}"
-export ZOO_TLS_QUORUM_TRUSTSTORE_FILE="${ZOO_TLS_QUORUM_TRUSTSTORE_FILE:-}"
-export ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD="${ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD:-}"
+		# Application TLS Settings
+		export ZOO_TLS_CLIENT_ENABLE="${ZOO_TLS_CLIENT_ENABLE:-false}"
+		export ZOO_TLS_PORT_NUMBER="${ZOO_TLS_PORT_NUMBER:-3181}"
+		export ZOO_TLS_CLIENT_KEYSTORE_FILE="${ZOO_TLS_CLIENT_KEYSTORE_FILE:-}"
+		export ZOO_TLS_CLIENT_KEYSTORE_PASSWORD="${ZOO_TLS_CLIENT_KEYSTORE_PASSWORD:-}"
+		export ZOO_TLS_CLIENT_TRUSTSTORE_FILE="${ZOO_TLS_CLIENT_TRUSTSTORE_FILE:-}"
+		export ZOO_TLS_CLIENT_TRUSTSTORE_PASSWORD="${ZOO_TLS_CLIENT_TRUSTSTORE_PASSWORD:-}"
+		export ZOO_TLS_QUORUM_ENABLE="${ZOO_TLS_QUORUM_ENABLE:-false}"
+		export ZOO_TLS_QUORUM_KEYSTORE_FILE="${ZOO_TLS_QUORUM_KEYSTORE_FILE:-}"
+		export ZOO_TLS_QUORUM_KEYSTORE_PASSWORD="${ZOO_TLS_QUORUM_KEYSTORE_PASSWORD:-}"
+		export ZOO_TLS_QUORUM_TRUSTSTORE_FILE="${ZOO_TLS_QUORUM_TRUSTSTORE_FILE:-}"
+		export ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD="${ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD:-}"
 
-# JVM settings
-export JVMFLAGS="${JVMFLAGS:-}"
-export HEAP_SIZE="${HEAP_SIZE:-1024}"
+		# Java Settings
+		export JVMFLAGS="${JVMFLAGS:-}"
+		export HEAP_SIZE="${HEAP_SIZE:-1024}"
 
-# Application Authentication
-export ZOO_ENABLE_AUTH="${ZOO_ENABLE_AUTH:-no}"
-export ZOO_CLIENT_USER="${ZOO_CLIENT_USER:-}"
-export ZOO_CLIENT_PASSWORD="${ZOO_CLIENT_PASSWORD:-}"
-export ZOO_SERVER_USERS="${ZOO_SERVER_USERS:-}"
-export ZOO_SERVER_PASSWORDS="${ZOO_SERVER_PASSWORDS:-}"
+		# Authentication
+		export ZOO_ENABLE_AUTH="${ZOO_ENABLE_AUTH:-no}"
+		export ZOO_CLIENT_USER="${ZOO_CLIENT_USER:-}"
+		export ZOO_CLIENT_PASSWORD="${ZOO_CLIENT_PASSWORD:-}"
+		export ZOO_SERVER_USERS="${ZOO_SERVER_USERS:-}"
+		export ZOO_SERVER_PASSWORDS="${ZOO_SERVER_PASSWORDS:-}"
 EOF
 
     # 利用 *_FILE 设置密码，不在配置命令中设置密码，增强安全性
     if [[ -f "${ZOO_CLIENT_PASSWORD_FILE:-}" ]]; then
-        cat <<"EOF"
-export ZOO_CLIENT_PASSWORD="$(< "${ZOO_CLIENT_PASSWORD_FILE}")"
+        cat <<-'EOF'
+			export ZOO_CLIENT_PASSWORD="$(< "${ZOO_CLIENT_PASSWORD_FILE}")"
 EOF
     fi
 	
     if [[ -f "${ZOO_SERVER_PASSWORDS_FILE:-}" ]]; then
-        cat <<"EOF"
-export ZOO_SERVER_PASSWORDS="$(< "${ZOO_SERVER_PASSWORDS_FILE}")"
+        cat <<-'EOF'
+			export ZOO_SERVER_PASSWORDS="$(< "${ZOO_SERVER_PASSWORDS_FILE}")"
 EOF
     fi
 }
@@ -131,8 +131,6 @@ zoo_common_conf_set() {
 }
 
 # 更新 server.properties 配置文件中指定变量值
-# 全局变量:
-#   ZOO_CONF_FILE
 # 变量:
 #   $1 - 变量
 #   $2 - 值（列表）
@@ -141,8 +139,6 @@ zoo_conf_set() {
 }
 
 # 更新 log4j.properties 配置文件中指定变量值
-# 全局变量:
-#   APP_CONF_DIR
 # 变量:
 #   $1 - 变量
 #   $2 - 值（列表）
@@ -151,8 +147,6 @@ zoo_log4j_set() {
 }
 
 # 生成默认配置文件
-# 全局变量:
-#   ZOO_*
 zoo_generate_conf() {
     cp "${APP_CONF_DIR}/zoo_sample.cfg" "${ZOO_CONF_FILE}"
     echo >> "${ZOO_CONF_FILE}"
@@ -178,6 +172,8 @@ zoo_generate_conf() {
         zoo_conf_set "admin.serverPort" 8080
         zoo_conf_set "admin.idleTimeout" 30000
         zoo_conf_set "admin.commandURL" "/commands"
+    else
+        zoo_conf_set "admin.enableServer" false
     fi
 
     # Set log level
@@ -223,8 +219,6 @@ zoo_generate_conf() {
 }
 
 # 设置环境变量 JVMFLAGS
-# 全局变量:
-#   JVMFLAGS
 # 参数:
 #   $1 - value
 zoo_export_jvmflags() {
@@ -235,8 +229,6 @@ zoo_export_jvmflags() {
 }
 
 # 配置 HEAP 大小
-# 全局变量:
-#   JVMFLAGS
 # 参数:
 #   $1 - HEAP 大小
 zoo_configure_heap_size() {
@@ -251,8 +243,6 @@ zoo_configure_heap_size() {
 }
 
 # 配置 ACL 参数
-# 全局变量:
-#   ZOO_*
 zoo_configure_acl() {
     local acl_string=""
     for server_user in ${ZOO_SERVER_USERS//[;, ]/ }; do
@@ -274,8 +264,6 @@ zoo_enable_authentication() {
 }
 
 # 为 zookeeper 认证创建 JAAS 配置文件
-# 全局变量:
-#   JVMFLAGS, ZOO_*
 zoo_create_jaas_file() {
     LOG_I "Creating jaas file..."
     read -r -a server_users_list <<< "${ZOO_SERVER_USERS//[;, ]/ }"
@@ -306,8 +294,6 @@ EOF
 }
 
 # Enable Prometheus metrics for ZooKeeper
-# 全局变量:
-#   ZOO_PROMETHEUS_METRICS_PORT_NUMBER
 zoo_enable_prometheus_metrics() {
     LOG_I "Enabling Prometheus metrics..."
     zoo_conf_set "metricsProvider.className" "org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider"
@@ -315,13 +301,11 @@ zoo_enable_prometheus_metrics() {
     zoo_conf_set "metricsProvider.exportJvmInfo" true
 }
 
-# 检测用户参数信息是否满足条件
-# 针对部分权限过于开放情况，可打印提示信息
+# 检测用户参数信息是否满足条件; 针对部分权限过于开放情况，打印提示信息
 app_verify_minimum_env() {
     local error_code=0
     LOG_D "Validating settings in ZOO_* env vars..."
 
-    # Auxiliary functions
     print_validation_error() {
         LOG_E "$1"
         error_code=1
@@ -386,9 +370,48 @@ app_enable_remote_connections() {
 	
 }
 
+# 检测依赖的服务端口是否就绪；该脚本依赖系统工具 'netcat'
+# 参数:
+#   $1 - host:port
+app_wait_service() {
+    local serviceport=${1:?Missing server info}
+    local service=${serviceport%%:*}
+    local port=${serviceport#*:}
+    local retry_seconds=5
+    local max_try=100
+    let i=1
+
+    if [[ -z "$(which nc)" ]]; then
+        LOG_E "Nedd nc installed before, command: \"apk add netcat-openbsd\"."
+        exit 1
+    fi
+
+    LOG_I "[0/${max_try}] check for ${service}:${port}..."
+
+    set +e
+    nc -z ${service} ${port}
+    result=$?
+
+    until [ $result -eq 0 ]; do
+      LOG_D "  [$i/${max_try}] not available yet"
+      if (( $i == ${max_try} )); then
+        LOG_E "${service}:${port} is still not available; giving up after ${max_try} tries."
+        exit 1
+      fi
+      
+      LOG_I "[$i/${max_try}] try in ${retry_seconds}s once again ..."
+      let "i++"
+      sleep ${retry_seconds}
+
+      nc -z ${service} ${port}
+      result=$?
+    done
+
+    set -e
+    LOG_I "[$i/${max_try}] ${service}:${port} is available."
+}
+
 # 以后台方式启动应用服务，并等待启动就绪
-# 全局变量:
-#   ZOO_*
 app_start_server_bg() {
     is_app_server_running && return
     LOG_I "Starting ${APP_NAME} in background..."
@@ -404,14 +427,13 @@ app_start_server_bg() {
     sleep 1
 	# 通过命令或特定端口检测应用是否就绪
     LOG_I "Checking ${APP_NAME} ready status..."
-    wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
+    #wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
+    app_wait_service "127.0.0.1:$ZOO_PORT_NUMBER"
 
     LOG_D "${APP_NAME} is ready for service..."
 }
 
 # 停止应用服务
-# 全局变量:
-#   APP_*
 app_stop_server() {
     #is_app_server_running || return
     LOG_I "Stopping ${APP_NAME}..."
@@ -432,16 +454,11 @@ app_stop_server() {
 }
 
 # 检测应用服务是否在后台运行中
-# 全局变量:
-#   ZOO_*
-# 返回值:
-#   布尔值
 is_app_server_running() {
     LOG_D "Check if ${APP_NAME} is running..."
     local pid
-    pid="$(get_pid_from_file ${ZOOPIDFILE})"
+    pid="$(get_pid_from_file '${ZOOPIDFILE}')"
 
-    LOG_D " PID from ${ZOOPIDFILE}: ${pid}"
     if [[ -z "${pid}" ]]; then
         false
     else
@@ -459,8 +476,6 @@ app_clean_tmp_file() {
 }
 
 # 在重新启动容器时，删除标志文件及必须删除的临时文件 (容器重新启动)
-# 全局变量:
-#   APP_*
 app_clean_from_restart() {
     LOG_D "Clean ${APP_NAME} tmp files for restart..."
     local -r -a files=(
@@ -477,7 +492,7 @@ app_clean_from_restart() {
 
 # 应用默认初始化操作
 # 执行完毕后，生成文件 ${APP_CONF_DIR}/.app_init_flag 及 ${APP_DATA_DIR}/.data_init_flag 文件
-docker_app_init() {
+app_default_init() {
 	app_clean_from_restart
     LOG_D "Check init status of ${APP_NAME}..."
 
@@ -505,7 +520,7 @@ docker_app_init() {
         echo "${ZOO_SERVER_ID}" > "${APP_DATA_DIR}/myid"
 
 		# 检测服务是否运行中如果未运行，则启动后台服务
-        is_app_server_running || app_start_server_bg
+        #is_app_server_running || app_start_server_bg
 
         if is_boolean_yes "${ZOO_ENABLE_AUTH}" && [[ ${ZOO_SERVER_ID} -eq 1 ]] && [[ -n ${ZOO_SERVER_USERS} ]]; then
             zoo_configure_acl
@@ -517,23 +532,52 @@ docker_app_init() {
     fi
 }
 
+# 用户自定义的前置初始化操作，依次执行目录 preinitdb.d 中的初始化脚本
+# 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_preinit_flag
+app_custom_preinit() {
+    LOG_D "Check custom pre-init status of ${APP_NAME}..."
+
+    # 检测用户配置文件目录是否存在 preinitdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
+    if [ -d "/srv/conf/${APP_NAME}/preinitdb.d" ]; then
+        # 检测数据存储目录是否存在已初始化标志文件；如果不存在，检索可执行脚本文件并进行初始化操作
+        if [[ -n $(find "/srv/conf/${APP_NAME}/preinitdb.d/" -type f -regex ".*\.\(sh\)") ]] && \
+            [[ ! -f "${APP_DATA_DIR}/.custom_preinit_flag" ]]; then
+            LOG_I "Process custom pre-init scripts from /srv/conf/${APP_NAME}/preinitdb.d..."
+
+            # 检索所有可执行脚本，排序后执行
+            find "/srv/conf/${APP_NAME}/preinitdb.d/" -type f -regex ".*\.\(sh\)" | sort | process_init_files
+
+            touch ${APP_DATA_DIR}/.custom_preinit_flag
+            echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.custom_preinit_flag
+            LOG_I "Custom preinit for ${APP_NAME} complete."
+        else
+            LOG_I "Custom preinit for ${APP_NAME} already done before, skipping initialization."
+        fi
+    fi
+
+    # 检测依赖的服务是否就绪
+    #for i in ${SERVICE_PRECONDITION[@]}; do
+    #    app_wait_service "${i}"
+    #done
+}
+
 # 用户自定义的应用初始化操作，依次执行目录initdb.d中的初始化脚本
 # 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_init_flag
-docker_custom_init() {
+app_custom_init() {
     LOG_D "Check custom init status of ${APP_NAME}..."
 
     # 检测用户配置文件目录是否存在 initdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
     if [ -d "/srv/conf/${APP_NAME}/initdb.d" ]; then
     	# 检测数据存储目录是否存在已初始化标志文件；如果不存在，检索可执行脚本文件并进行初始化操作
-    	if [[ -n $(find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)") ]] && \
+    	if [[ -n $(find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\|sql\|sql.gz\)") ]] && \
             [[ ! -f "${APP_DATA_DIR}/.custom_init_flag" ]]; then
             LOG_I "Process custom init scripts from /srv/conf/${APP_NAME}/initdb.d..."
 
             # 检测服务是否运行中；如果未运行，则启动后台服务
-            is_app_server_running || app_start_server_bg
+            #is_app_server_running || app_start_server_bg
 
             # 检索所有可执行脚本，排序后执行
-    		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)" | sort | while read -r f; do
+    		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\|sql\|sql.gz\)" | sort | while read -r f; do
                 case "$f" in
                     *.sh)
                         if [[ -x "$f" ]]; then
@@ -555,7 +599,7 @@ docker_custom_init() {
     fi
 
     # 检测服务是否运行中；如果运行，则停止后台服务
-	is_app_server_running && app_stop_server
+	#is_app_server_running && app_stop_server
 
     # 删除第一次运行生成的临时文件
     app_clean_tmp_file
@@ -563,3 +607,4 @@ docker_custom_init() {
 	# 绑定所有 IP ，启用远程访问
     app_enable_remote_connections
 }
+
