@@ -148,8 +148,11 @@ zoo_log4j_set() {
 
 # 生成默认配置文件
 zoo_generate_conf() {
-    cp "${APP_CONF_DIR}/zoo_sample.cfg" "${ZOO_CONF_FILE}"
-    echo >> "${ZOO_CONF_FILE}"
+    cp -rf "${APP_CONF_DIR}/zoo_sample.cfg" "${ZOO_CONF_FILE}"
+    
+    LOG_I "Modify config file via environment"
+    echo "" >> "${ZOO_CONF_FILE}"
+
 
     zoo_conf_set "tickTime" "${ZOO_TICK_TIME}"
     zoo_conf_set "initLimit" "${ZOO_INIT_LIMIT}"
@@ -216,6 +219,8 @@ zoo_generate_conf() {
         zoo_conf_set "ssl.quorum.trustStore.location" "$ZOO_TLS_QUORUM_TRUSTSTORE_FILE"
         zoo_conf_set "ssl.quorum.trustStore.password" "$ZOO_TLS_QUORUM_TRUSTSTORE_PASSWORD"
     fi
+	
+    echo "" >> "${ZOO_CONF_FILE}"
 }
 
 # 设置环境变量 JVMFLAGS
