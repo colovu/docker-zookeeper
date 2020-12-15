@@ -1,11 +1,12 @@
-# Ver: 1.2 by Endial Fang (endial@126.com)
+# Ver: 1.4 by Endial Fang (endial@126.com)
 #
 
 # 预处理 =========================================================================
-FROM colovu/abuilder as builder
+ARG registry_url="registry.cn-shenzhen.aliyuncs.com"
+FROM ${registry_url}/colovu/abuilder as builder
 
 # sources.list 可使用版本：default / tencent / ustc / aliyun / huawei
-ARG apt_source=default
+ARG apt_source=aliyun
 
 # 编译镜像时指定用于加速的本地服务器地址
 ARG local_url=""
@@ -13,12 +14,13 @@ ARG local_url=""
 ENV APP_NAME=zookeeper \
 	APP_VERSION=3.5.7
 
-WORKDIR /usr/local
-
+# 选择软件包源(Optional)，以加速后续软件包安装
 RUN select_source ${apt_source};
+
+# 安装依赖的软件包及库(Optional)
 #RUN install_pkg xz-utils
 
-# 下载并解压软件包
+# 下载并解压软件包 wait-for-port
 RUN set -eux; \
 	appName="wait-for-port-1.0.0-1-linux-amd64-debian-10.tar.gz"; \
 	[ ! -z ${local_url} ] && localURL=${local_url}/bitnami; \
@@ -29,7 +31,7 @@ RUN set -eux; \
 	mv /usr/local/wait-for-port-1.0.0-1-linux-amd64-debian-10/files/common/bin/wait-for-port /usr/local/bin/; \
 	chmod +x /usr/local/bin/wait-for-port;
 
-# 下载并解压软件包
+# 下载并解压软件包 zookeeper
 RUN set -eux; \
 	appName="apache-${APP_NAME}-${APP_VERSION}-bin.tar.gz"; \
 	appKeys="0x3D296268A36FACA1B7EAF110792D43153B5B5147 \
@@ -49,28 +51,25 @@ RUN set -eux; \
 	rm -rf /usr/local/apache-${APP_NAME}-${APP_VERSION}-bin/docs;
 
 # 镜像生成 ========================================================================
-FROM colovu/openjre:1.8-alpine
+FROM ${registry_url}/colovu/openjre:8-alpine
 
-ARG apt_source=default
+# sources.list 可使用版本：default / tencent / ustc / aliyun / huawei
+ARG apt_source=aliyun
+
+# 编译镜像时指定用于加速的本地服务器地址
 ARG local_url=""
 
-
+# 镜像所包含应用的基础信息
 ENV APP_NAME=zookeeper \
 	APP_USER=zookeeper \
 	APP_EXEC=zkServer.sh \
 	APP_VERSION=3.5.7
 
 ENV	APP_HOME_DIR=/usr/local/${APP_NAME} \
-	APP_DEF_DIR=/etc/${APP_NAME} \
-	APP_CONF_DIR=/srv/conf/${APP_NAME} \
-	APP_DATA_DIR=/srv/data/${APP_NAME} \
-	APP_DATA_LOG_DIR=/srv/datalog/${APP_NAME} \
-	APP_CACHE_DIR=/var/cache/${APP_NAME} \
-	APP_RUN_DIR=/var/run/${APP_NAME} \
-	APP_LOG_DIR=/var/log/${APP_NAME} \
-	APP_CERT_DIR=/srv/cert/${APP_NAME}
+	APP_DEF_DIR=/etc/${APP_NAME}
 
-ENV PATH="${APP_HOME_DIR}/bin:${PATH}" 
+ENV PATH="${APP_HOME_DIR}/bin:${APP_HOME_DIR}/sbin:${PATH}" \
+	LD_LIBRARY_PATH="${APP_HOME_DIR}/lib"
 
 LABEL \
 	"Version"="v${APP_VERSION}" \
@@ -78,25 +77,26 @@ LABEL \
 	"Dockerfile"="https://github.com/colovu/docker-${APP_NAME}" \
 	"Vendor"="Endial Fang (endial@126.com)"
 
+# 拷贝应用使用的客制化脚本，并创建对应的用户及数据存储目录
 COPY customer /
-
-# 以包管理方式安装软件包(Optional)
-RUN select_source ${apt_source}
-RUN install_pkg netcat-openbsd
-#RUN install_pkg bash tini sudo libssl1.1
-
 RUN create_user && prepare_env
 
-# 从预处理过程中拷贝软件包(Optional)
+# 从预处理过程中拷贝软件包(Optional)，可以使用阶段编号或阶段命名定义来源
 COPY --from=builder /usr/local/bin/ /usr/local/bin
 COPY --from=builder /usr/local/apache-${APP_NAME}-${APP_VERSION}-bin/ /usr/local/${APP_NAME}
 COPY --from=builder /usr/local/apache-${APP_NAME}-${APP_VERSION}-bin/conf/ /etc/${APP_NAME}
+
+# 选择软件包源(Optional)，以加速后续软件包安装
+RUN select_source ${apt_source}
+
+# 安装依赖的软件包及库(Optional)
+RUN install_pkg netcat-openbsd
 
 # 执行预处理脚本，并验证安装的软件包
 RUN set -eux; \
 	override_file="/usr/local/overrides/overrides-${APP_VERSION}.sh"; \
 	[ -e "${override_file}" ] && /bin/bash "${override_file}"; \
-	:;
+	gosu --version;
 
 # 默认提供的数据卷
 VOLUME ["/srv/conf", "/srv/data", "/srv/datalog", "/srv/cert", "/var/log"]

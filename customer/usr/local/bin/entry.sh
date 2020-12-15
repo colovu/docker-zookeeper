@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ver: 1.0 by Endial Fang (endial@126.com)
+# Ver: 1.1 by Endial Fang (endial@126.com)
 # 
 # 容器入口脚本
 
@@ -8,9 +8,10 @@
 set -eu
 set -o pipefail
 
-. /usr/local/bin/appcommon.sh			# 应用专用函数库
+. /usr/local/bin/comm-${APP_NAME}.sh			# 应用专用函数库
 
-eval "$(app_env)"
+. /usr/local/bin/comm-env.sh 			# 设置环境变量
+
 LOG_I "** Processing entry.sh **"
 
 if ! is_sourced; then
@@ -25,8 +26,8 @@ if ! is_sourced; then
 	if [ "$1" = "${APP_EXEC}" ] && is_root; then
     	/usr/local/bin/setup.sh
 
-		LOG_I "Restart with non-root user: ${APP_USER:-APP_NAME}\n"
-		exec gosu "${APP_USER:-APP_NAME}" "$0" "$@"
+		LOG_I "Restart with non-root user: ${APP_USER}\n"
+		exec gosu "${APP_USER}" "$0" "$@"
 	fi
 
 	[ "$1" = "${APP_EXEC}" ] && /usr/local/bin/init.sh

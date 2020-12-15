@@ -2,7 +2,7 @@
 
 针对 [ZooKeeper](https://zookeeper.apache.org/) 应用的 Docker 镜像，用于提供 ZooKeeper 服务。
 
-详细信息可参照：[3.6.1官方说明](https://zookeeper.apache.org/doc/r3.6.1/index.html)
+详细信息可参照：[3.5.7官方说明](https://zookeeper.apache.org/doc/r3.5.7/index.html)
 
 
 
@@ -10,12 +10,11 @@
 
 **版本信息**：
 
-- 3.6、latest
 - 3.5
 
 **镜像信息**
 
-* 镜像地址：colovu/zookeeper:3.5
+* 镜像地址：registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.5
 
 
 
@@ -24,7 +23,8 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d colovu/zookeeper:3.5
+$ docker run -d -e ALLOW_ANONYMOUS_LOGIN=yes \
+  registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.5
 ```
 
 Docker-Compose 快速启动命令：
@@ -70,7 +70,7 @@ $ docker-compose up -d
 在初始化 ZooKeeper 容器时，如果配置文件`zoo.cfg`不存在，可以在命令行中设置相应环境变量对默认参数进行修改。类似命令如下：
 
 ```shell
-$ docker run -d -e "ZOO_INIT_LIMIT=10" --name zookeeper colovu/zookeeper:latest
+$ docker run -d -e "ZOO_INIT_LIMIT=10" --name zookeeper registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.5
 ```
 
 
@@ -225,7 +225,6 @@ services:
 
 ## 更新记录
 
-- 3.6、latest
 - 3.5
 
 
