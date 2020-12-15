@@ -15,7 +15,7 @@
 
 **镜像信息**
 
-* 镜像地址：colovu/zookeeper
+* 镜像地址：registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6
 
 
 
@@ -24,7 +24,8 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d colovu/zookeeper
+$ docker run -d -e ALLOW_ANONYMOUS_LOGIN=yes \
+  registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6
 ```
 
 Docker-Compose 快速启动命令：
@@ -70,7 +71,7 @@ $ docker-compose up -d
 在初始化 ZooKeeper 容器时，如果配置文件`zoo.cfg`不存在，可以在命令行中设置相应环境变量对默认参数进行修改。类似命令如下：
 
 ```shell
-$ docker run -d -e "ZOO_INIT_LIMIT=10" --name zookeeper colovu/zookeeper:latest
+$ docker run -d -e "ZOO_INIT_LIMIT=10" --name zookeeper registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6
 ```
 
 

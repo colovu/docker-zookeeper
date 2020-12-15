@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ver: 1.0 by Endial Fang (endial@126.com)
+# Ver: 1.1 by Endial Fang (endial@126.com)
 # 
 # 应用环境及依赖文件设置脚本
 
@@ -8,17 +8,20 @@
 set -eu
 set -o pipefail
 
-. /usr/local/bin/appcommon.sh			# 应用专用函数库
+. /usr/local/bin/comm-${APP_NAME}.sh			# 应用专用函数库
 
-eval "$(app_env)"
+. /usr/local/bin/comm-env.sh 			# 设置环境变量
+
 LOG_I "** Processing setup.sh **"
 
 APP_DIRS="${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_DATA_LOG_DIR:-}"
+
+LOG_I "Ensure directory exists: ${APP_DIRS}"
 for dir in ${APP_DIRS}; do
 	ensure_dir_exists ${dir}
 done
 
-app_verify_minimum_env
+${APP_NAME}_verify_minimum_env
 
 # 检测指定文件是否在配置文件存储目录存在，如果不存在则拷贝（新挂载数据卷、手动删除都会导致不存在）
 LOG_I "Check config files in: ${APP_CONF_DIR}"
@@ -26,6 +29,7 @@ if [[ ! -z "$(ls -A "${APP_DEF_DIR}")" ]]; then
 	ensure_config_file_exist "${APP_DEF_DIR}" $(ls -A "${APP_DEF_DIR}")
 fi
 
+LOG_I "Ensure directory ownership: ${APP_USER}"
 for dir in ${APP_DIRS}; do
 	configure_permissions_ownership "$dir" -u "${APP_USER}" -g "${APP_USER}"
 done

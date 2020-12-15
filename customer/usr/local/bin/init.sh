@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ver: 1.0 by Endial Fang (endial@126.com)
+# Ver: 1.1 by Endial Fang (endial@126.com)
 # 
 # 应用初始化脚本
 
@@ -8,18 +8,21 @@
 set -eu
 set -o pipefail
 
-. /usr/local/bin/appcommon.sh			# 应用专用函数库
+. /usr/local/bin/comm-${APP_NAME}.sh			# 应用专用函数库
 
-eval "$(app_env)"
+. /usr/local/bin/comm-env.sh 			# 设置环境变量
+
 LOG_I "** Processing init.sh **"
 
+trap "${APP_NAME}_stop_server" EXIT
+
 # 执行应用预初始化操作
-app_custom_preinit
+${APP_NAME}_custom_preinit
 
 # 执行应用初始化操作
-app_default_init
+${APP_NAME}_default_init
 
 # 执行用户自定义初始化脚本
-app_custom_init
+${APP_NAME}_custom_init
 
 LOG_I "** Processing init.sh finished! **"
