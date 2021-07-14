@@ -8,6 +8,7 @@
 
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
+. /usr/local/scripts/liblog.sh
 . /usr/local/scripts/libos.sh
 . /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
@@ -360,7 +361,7 @@ zookeeper_wait_service() {
     let i=1
 
     if [[ -z "$(which nc)" ]]; then
-        LOG_E "Nedd nc installed before, command: \"apk add netcat-openbsd\"."
+        LOG_E "Nedd nc installed before, command: \"apt-get install netcat\"."
         exit 1
     fi
 

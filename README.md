@@ -14,8 +14,12 @@
 
 **镜像信息**
 
-* 镜像地址：registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.5
+* 镜像地址：
+  - Aliyun仓库：registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper
+  - DockerHub：colovu/zookeeper
+  * 依赖镜像：colovu/openjre:8
 
+> 后续相关命令行默认使用`[Docker Hub](https://hub.docker.com)`镜像服务器做说明
 
 
 ## TL;DR
@@ -23,15 +27,22 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d -e ALLOW_ANONYMOUS_LOGIN=yes \
-  registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.5
+$ docker run -d -e ALLOW_ANONYMOUS_LOGIN=yes colovu/zookeeper:3.5
 ```
+
+
+
 
 Docker-Compose 快速启动命令：
 
 ```shell
-$ curl -sSL https://raw.githubusercontent.com/colovu/docker-zookeeper/master/docker-compose.yml > docker-compose.yml
+# 从 Gitee 下载 Compose 文件
+$ curl -sSL -o https://gitee.com/colovu/docker-zookeeper/raw/3.5/docker-compose.yml
 
+# 从 Github 下载 Compose 文件
+$ curl -sSL -o https://raw.githubusercontent.com/colovu/docker-zookeeper/3.5/docker-compose.yml
+
+# 创建并启动容器
 $ docker-compose up -d
 ```
 
@@ -189,11 +200,11 @@ ALLOW_ANONYMOUS_LOGIN=yes
 
 ```shell
 $ docker run -d -e ZOO_ENABLE_AUTH=yes \
-		-e ZOO_SERVER_USERS=user1,user2 \
-    -e ZOO_SERVER_PASSWORDS=pass4user1,pass4user2 \
-    -e ZOO_CLIENT_USER=user1 \
-    -e ZOO_CLIENT_PASSWORD=pass4user1 \
-    colovu/zookeeper:latest
+	-e ZOO_SERVER_USERS=user1,user2 \
+	-e ZOO_SERVER_PASSWORDS=pass4user1,pass4user2 \
+	-e ZOO_CLIENT_USER=user1 \
+	-e ZOO_CLIENT_PASSWORD=pass4user1 \
+	colovu/zookeeper:3.5
 ```
 
 使用 Docker Compose 时，`docker-compose.yml`应包含类似如下配置：
@@ -213,13 +224,17 @@ services:
 
 ### 容器安全
 
-本容器默认使用应用对应的运行时用户及用户组运行应用，以加强容器的安全性。在使用非`root`用户运行容器时，相关的资源访问会受限；应用仅能操作镜像创建时指定的路径及数据。使用`Non-root`方式的容器，更适合在生产环境中使用。
+本容器默认使用`non-root`运行应用，以加强容器的安全性。在使用`non-root`用户运行容器时，相关的资源访问会受限；应用仅能操作镜像创建时指定的路径及数据。使用`non-root`方式的容器，更适合在生产环境中使用。
+
+
+
+如果需要切换为`root`方式运行应用，可以在启动命令中增加`-u root`以指定运行的用户。
 
 
 
 ## 注意事项
 
-- 容器中启动参数不能配置为后台运行，如果应用使用后台方式运行，则容器的启动命令会在运行后自动退出，从而导致容器退出；只能使用前台运行方式，即：`start-foreground`
+- 容器中应用的启动参数不能配置为后台运行，如果应用使用后台方式运行，则容器的启动命令会在运行后自动退出，从而导致容器退出
 
 
 
@@ -232,3 +247,4 @@ services:
 ----
 
 本文原始来源 [Endial Fang](https://github.com/colovu) @ [Github.com](https://github.com)
+

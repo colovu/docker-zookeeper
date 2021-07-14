@@ -27,6 +27,9 @@ build-arg+=--build-arg local_url=http://$(local_ip)/dist-files
 
 .PHONY: build clean clearclean upgrade
 
+# 屏蔽 "Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them"
+export DOCKER_SCAN_SUGGEST=false
+
 build:
 	@echo "Build $(image_name):$(image_tag)"
 	@docker build --progress plain --force-rm $(build-arg) -t $(image_name):$(image_tag) .
