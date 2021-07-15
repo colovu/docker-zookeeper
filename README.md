@@ -16,8 +16,8 @@
 **镜像信息**
 
 * 镜像地址：
-  - Aliyun仓库：registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper
-  - DockerHub：colovu/zookeeper
+  - Aliyun仓库：registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6
+  - DockerHub：colovu/zookeeper:3.6
   * 依赖镜像：colovu/openjre:8
 
 > 后续相关命令行默认使用`[Docker Hub](https://hub.docker.com)`镜像服务器做说明
@@ -82,7 +82,7 @@ $ docker-compose up -d
 在初始化 ZooKeeper 容器时，如果配置文件`zoo.cfg`不存在，可以在命令行中设置相应环境变量对默认参数进行修改。类似命令如下：
 
 ```shell
-$ docker run -d -e "ZOO_INIT_LIMIT=10" --name zookeeper registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6
+$ docker run -d -e "ZOO_INIT_LIMIT=10" --name zookeeper colovu/zookeeper
 ```
 
 
