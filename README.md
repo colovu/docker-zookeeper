@@ -6,7 +6,7 @@
 
 
 
-![logo](img/logo.png)
+![logo](img/zookeeper-logo.png)
 
 **版本信息**：
 
@@ -20,6 +20,7 @@
   * 依赖镜像：colovu/openjre:8
 
 > 后续相关命令行默认使用`[Docker Hub](https://hub.docker.com)`镜像服务器做说明
+
 
 
 ## TL;DR
