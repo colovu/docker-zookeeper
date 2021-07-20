@@ -93,9 +93,9 @@ ENV PATH="${APP_HOME_DIR}/sbin:${APP_HOME_DIR}/bin:${PATH}" \
 	LD_LIBRARY_PATH="${APP_HOME_DIR}/lib"
 
 LABEL \
-	"Version"="v${app_version}" \
-	"Description"="Docker image for ${app_name}(v${app_version})." \
-	"Dockerfile"="https://github.com/colovu/docker-${app_name}" \
+	"Version"="v${APP_VERSION}" \
+	"Description"="Docker image for ${APP_NAME}(v${APP_VERSION})." \
+	"Dockerfile"="https://github.com/colovu/docker-${APP_NAME}" \
 	"Vendor"="Endial Fang (endial@126.com)"
 
 # 从预处理过程中拷贝软件包(Optional)，可以使用阶段编号或阶段命名定义来源
@@ -105,7 +105,6 @@ COPY --from=builder /tmp/apache-${APP_NAME}-${APP_VERSION}-bin/ /usr/local/${APP
 # 拷贝应用使用的客制化脚本，并创建对应的用户及数据存储目录
 COPY customer /
 RUN set -eux; \
-	ls -al /srv; \
 	prepare_env; \
 	/bin/bash -c "ln -sf /usr/local/${APP_NAME}/conf /etc/${APP_NAME}";
 
@@ -118,13 +117,17 @@ RUN install_pkg netcat
 # 执行预处理脚本，并验证安装的软件包
 RUN set -eux; \
 	override_file="/usr/local/overrides/overrides-${APP_VERSION}.sh"; \
-	[ -e "${override_file}" ] && /bin/bash "${override_file}";
+	[ -e "${override_file}" ] && /bin/bash "${override_file}"; \
+	:;
 
 # 默认提供的数据卷
 VOLUME ["/srv/conf", "/srv/data", "/srv/datalog", "/srv/cert", "/var/log"]
 
 # 默认non-root用户启动，必须保证端口在1024之上
 EXPOSE 2181 2888 3888 8080
+
+# 关闭基础镜像的健康检查
+#HEALTHCHECK NONE
 
 # 应用健康状态检查
 #HEALTHCHECK --interval=30s --timeout=30s --retries=3 \
@@ -136,7 +139,7 @@ HEALTHCHECK --interval=10s --timeout=10s --retries=3 \
 USER 1001
 
 # 设置工作目录
-WORKDIR /srv/conf
+WORKDIR /srv/data
 
 # 容器初始化命令
 ENTRYPOINT ["/usr/local/bin/entry.sh"]

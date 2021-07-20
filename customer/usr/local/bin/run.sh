@@ -13,7 +13,6 @@ set -o pipefail
 
 LOG_I "** Processing run.sh **"
 
-
 readonly START_COMMAND="$(command -v ${APP_EXEC})"
 
 # 确保应用运行在前台

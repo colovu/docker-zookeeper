@@ -6,7 +6,7 @@
 
 
 
-![logo](img/logo.png)
+![logo](img/zookeeper-logo.png)
 
 **版本信息**：
 
@@ -23,12 +23,13 @@
 > 后续相关命令行默认使用`[Docker Hub](https://hub.docker.com)`镜像服务器做说明
 
 
+
 ## TL;DR
 
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d -e ALLOW_ANONYMOUS_LOGIN=yes colovu/zookeeper
+$ docker run -d -e ALLOW_ANONYMOUS_LOGIN=yes colovu/zookeeper:3.6
 ```
 
 
